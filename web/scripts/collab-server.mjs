@@ -1,9 +1,16 @@
 import http from 'http';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { WebSocketServer } from 'ws';
-import * as Y from 'yjs';
 import { getYDoc, setupWSConnection } from 'y-websocket/bin/utils';
 import pg from 'pg';
+
+// IMPORTANT: load Yjs from the SAME CommonJS instance that y-websocket/bin/utils
+// uses (require('yjs') → dist/yjs.cjs). Importing the ESM build (`import * as Y`)
+// loads a second Yjs copy ("Yjs was already imported"), and encoding a doc owned by
+// one instance with the other silently drops edits. createRequire guarantees one copy.
+const require = createRequire(import.meta.url);
+const Y = require('yjs');
 
 // Load web/.env.local so this standalone process (spawned by `concurrently`, not
 // Next.js) picks up COLLAB_DATABASE_URL / COLLAB_PORT during local development.
