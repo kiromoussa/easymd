@@ -3,7 +3,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { WebSocketServer } from 'ws';
 import { getYDoc, setupWSConnection } from 'y-websocket/bin/utils';
-import pg from 'pg';
+import { createClient } from '@supabase/supabase-js';
 
 // IMPORTANT: load Yjs from the SAME CommonJS instance that y-websocket/bin/utils
 // uses (require('yjs') → dist/yjs.cjs). Importing the ESM build (`import * as Y`)
@@ -13,8 +13,8 @@ const require = createRequire(import.meta.url);
 const Y = require('yjs');
 
 // Load web/.env.local so this standalone process (spawned by `concurrently`, not
-// Next.js) picks up COLLAB_DATABASE_URL / COLLAB_PORT during local development.
-// In production the values come from the real environment, so a missing file is fine.
+// Next.js) picks up config during local development. In production the values come
+// from the real environment, so a missing file is fine.
 try {
   process.loadEnvFile(fileURLToPath(new URL('../.env.local', import.meta.url)));
 } catch {
@@ -24,11 +24,12 @@ try {
 const PORT = Number(process.env.COLLAB_PORT || 3848);
 const DOC_NAME = 'easymd-demo';
 const PERSIST_DEBOUNCE_MS = 500;
+const TABLE = 'documents';
 
-// Production: set COLLAB_DATABASE_URL to your Supabase Postgres connection string
-// (Supabase dashboard → Project Settings → Database → Connection string, include
-// `?sslmode=require`). Without it the server runs in-memory (documents reset on restart).
-const DATABASE_URL = process.env.COLLAB_DATABASE_URL || process.env.SUPABASE_DB_URL || '';
+// Durable persistence is backed by Supabase. The collab server runs server-side and
+// uses the SERVICE ROLE key (never exposed to the browser), which bypasses RLS.
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 const DEMO_CONTENT = `# CLAUDE.md — Live demo
 
@@ -58,59 +59,52 @@ Open this demo in two browser tabs. Edits sync in real time — live cursors, no
 `;
 
 /**
- * Postgres-backed persistence for Yjs documents (stored in Supabase).
- * Returns null when no database is configured (in-memory fallback for quick dev).
+ * Supabase-backed persistence for Yjs documents.
+ * State is stored base64-encoded in the public.documents table.
+ * Returns null when Supabase is not configured (in-memory fallback for quick dev).
  */
-function createDbPersistence(connectionString) {
-  if (!connectionString) return null;
+function createSupabasePersistence(url, serviceRoleKey) {
+  if (!url || !serviceRoleKey) return null;
 
-  const needsSsl = /sslmode=require/i.test(connectionString) || /supabase\.(co|com)/i.test(connectionString);
-  const pool = new pg.Pool({
-    connectionString,
-    max: 4,
-    ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
+  const client = createClient(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 
   return {
     async load(name) {
-      const { rows } = await pool.query('select state from documents where name = $1', [name]);
-      return rows[0]?.state ?? null; // bytea → Buffer (a Uint8Array)
+      const { data, error } = await client
+        .from(TABLE)
+        .select('state')
+        .eq('name', name)
+        .maybeSingle();
+      if (error) throw new Error(`Supabase load failed: ${error.message}`);
+      if (!data?.state) return null;
+      return new Uint8Array(Buffer.from(data.state, 'base64'));
     },
     async save(name, ydoc) {
-      const state = Buffer.from(Y.encodeStateAsUpdate(ydoc));
-      await pool.query(
-        `insert into documents (name, state, updated_at)
-         values ($1, $2, now())
-         on conflict (name) do update set state = excluded.state, updated_at = now()`,
-        [name, state],
-      );
-    },
-    async close() {
-      await pool.end();
+      const state = Buffer.from(Y.encodeStateAsUpdate(ydoc)).toString('base64');
+      const { error } = await client
+        .from(TABLE)
+        .upsert({ name, state, updated_at: new Date().toISOString() }, { onConflict: 'name' });
+      if (error) throw new Error(`Supabase save failed: ${error.message}`);
     },
   };
 }
 
-const db = createDbPersistence(DATABASE_URL);
+const db = createSupabasePersistence(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const ydoc = getYDoc(DOC_NAME, false);
 const ytext = ydoc.getText('markdown');
 
 if (db) {
-  try {
-    const persisted = await db.load(DOC_NAME);
-    if (persisted && persisted.length > 0) {
-      Y.applyUpdate(ydoc, persisted);
-      console.log(`Loaded "${DOC_NAME}" from Supabase (${persisted.length} bytes).`);
-    }
-  } catch (err) {
-    console.error('Failed to load document from Supabase:', err.message);
-    process.exitCode = 1;
-    throw err;
+  const persisted = await db.load(DOC_NAME);
+  if (persisted && persisted.length > 0) {
+    Y.applyUpdate(ydoc, persisted);
+    console.log(`Loaded "${DOC_NAME}" from Supabase (${persisted.length} bytes).`);
   }
 }
 
-// Seed first-run content if the document is empty (no disk/db copy yet).
+// Seed first-run content if the document is empty (no persisted copy yet).
 if (ytext.length === 0) {
   ytext.insert(0, DEMO_CONTENT);
 }
@@ -126,9 +120,11 @@ if (db) {
       db.save(DOC_NAME, ydoc).catch((err) => console.error('Persist failed:', err.message));
     }, PERSIST_DEBOUNCE_MS);
   });
-  console.log('Persistence: Supabase Postgres (durable).');
+  console.log(`Persistence: Supabase (durable) → ${SUPABASE_URL}`);
 } else {
-  console.warn('Persistence: in-memory only. Set COLLAB_DATABASE_URL to persist documents to Supabase.');
+  console.warn(
+    'Persistence: in-memory only. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to persist documents to Supabase.',
+  );
 }
 
 const server = http.createServer((_req, res) => {
@@ -151,7 +147,6 @@ async function shutdown() {
   if (db) {
     try {
       await db.save(DOC_NAME, ydoc);
-      await db.close();
     } catch (err) {
       console.error('Shutdown persist failed:', err.message);
     }
