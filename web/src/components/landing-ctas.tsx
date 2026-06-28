@@ -2,6 +2,19 @@
 
 import Link from 'next/link';
 import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/nextjs';
+import { dark } from '@clerk/themes';
+
+// The landing is always dark, so its auth modals are forced dark regardless of the
+// user's theme (this per-button appearance only affects these flows).
+const landingClerk = {
+  baseTheme: dark,
+  variables: {
+    colorPrimary: '#daff76',
+    colorTextOnPrimaryBackground: '#1a1e05',
+    borderRadius: '0.6rem',
+    fontFamily: 'var(--font-inter), ui-sans-serif, system-ui, sans-serif',
+  },
+};
 
 const primary =
   'rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]';
@@ -26,10 +39,10 @@ export function HeaderCtas() {
 
   return (
     <div className="flex items-center gap-2">
-      <SignInButton mode="modal" forceRedirectUrl="/dashboard" signUpForceRedirectUrl="/dashboard">
+      <SignInButton mode="modal" appearance={landingClerk} forceRedirectUrl="/dashboard" signUpForceRedirectUrl="/dashboard">
         <button className="px-3 py-2 text-sm text-[var(--mint-muted)] transition hover:text-[var(--mint)]">Sign in</button>
       </SignInButton>
-      <SignUpButton mode="modal" forceRedirectUrl="/dashboard" signInForceRedirectUrl="/dashboard">
+      <SignUpButton mode="modal" appearance={landingClerk} forceRedirectUrl="/dashboard" signInForceRedirectUrl="/dashboard">
         <button className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]">
           Get started
         </button>
@@ -47,7 +60,7 @@ export function HeroCtas() {
           Open dashboard
         </Link>
       ) : (
-        <SignUpButton mode="modal" forceRedirectUrl="/dashboard" signInForceRedirectUrl="/dashboard">
+        <SignUpButton mode="modal" appearance={landingClerk} forceRedirectUrl="/dashboard" signInForceRedirectUrl="/dashboard">
           <button className={primary}>Get started</button>
         </SignUpButton>
       )}
@@ -61,16 +74,16 @@ export function HeroCtas() {
 export function FooterCtas() {
   const { isSignedIn } = useAuth();
   // Sits on the lime CTA band, so the button is the dark inverse for contrast.
-  const dark = 'rounded-full bg-[var(--ink)] px-6 py-3 text-sm font-semibold text-[var(--mint)] transition hover:opacity-90';
+  const darkBtn = 'rounded-full bg-[var(--ink)] px-6 py-3 text-sm font-semibold text-[var(--mint)] transition hover:opacity-90';
   return (
     <div className="mt-10 flex flex-wrap justify-center gap-3">
       {isSignedIn ? (
-        <Link href="/dashboard" className={dark}>
+        <Link href="/dashboard" className={darkBtn}>
           Open your dashboard →
         </Link>
       ) : (
-        <SignUpButton mode="modal" forceRedirectUrl="/dashboard" signInForceRedirectUrl="/dashboard">
-          <button className={dark}>Get started free →</button>
+        <SignUpButton mode="modal" appearance={landingClerk} forceRedirectUrl="/dashboard" signInForceRedirectUrl="/dashboard">
+          <button className={darkBtn}>Get started free →</button>
         </SignUpButton>
       )}
     </div>

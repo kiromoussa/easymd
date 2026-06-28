@@ -1,6 +1,6 @@
 {
   "name": "easymd-cli",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Google Docs for markdown — collaborate on the actual .md file in your repo, live with humans and AI agents. CLI: login, auto-sync, and open .md files for real-time editing.",
   "type": "module",
   "bin": {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -51,6 +51,24 @@ export function DashboardGrid({
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [syncSpecial, setSyncSpecial] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => j && setSyncSpecial(Boolean(j.syncSpecial)))
+      .catch(() => {});
+  }, []);
+
+  const toggleSyncSpecial = useCallback(async () => {
+    const next = !syncSpecial;
+    setSyncSpecial(next);
+    await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ syncSpecial: next }),
+    }).catch(() => setSyncSpecial(!next));
+  }, [syncSpecial]);
 
   const sorted = useMemo(
     () => [...docs].sort((a, b) => orderKey(b).localeCompare(orderKey(a))),
@@ -131,6 +149,25 @@ export function DashboardGrid({
           className="rounded-md border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
         >
           {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+
+      {/* Sync settings */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-white/10 dark:bg-[#151a21]">
+        <div>
+          <p className="font-medium text-slate-900 dark:text-white">Auto-sync CLAUDE.md, README.md &amp; AGENTS.md</p>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            Off by default — these load-bearing files aren’t pushed by the watcher/hook unless you turn this on.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={syncSpecial}
+          onClick={toggleSyncSpecial}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition ${syncSpecial ? 'bg-[var(--accent)]' : 'bg-slate-300 dark:bg-white/15'}`}
+        >
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${syncSpecial ? 'left-[22px]' : 'left-0.5'}`} />
         </button>
       </div>
 

@@ -27,7 +27,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full font-sans antialiased">
+      <body className="min-h-full font-sans antialiased" suppressHydrationWarning>
         <ClerkAppearanceProvider>{children}</ClerkAppearanceProvider>
       </body>
     </html>

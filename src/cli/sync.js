@@ -5,6 +5,22 @@ import { requireCredentials } from './config.js';
 
 const IGNORE_DIRS = new Set(['node_modules', '.git', 'dist', '.next', '.turbo', 'build', 'coverage']);
 
+// "Load-bearing" agent files excluded from auto-sync by default. The account's
+// `sync_special` setting (toggled in the dashboard) opts back in.
+const SPECIAL_MD = new Set(['claude.md', 'readme.md', 'agents.md']);
+const isSpecial = (filePath) => SPECIAL_MD.has(basename(filePath).toLowerCase());
+
+// Ask the server whether this account wants the special files included.
+async function syncSpecialEnabled(creds) {
+  try {
+    const res = await fetch(`${creds.url}/api/cli/settings`, { headers: { Authorization: `Bearer ${creds.token}` } });
+    if (res.ok) return Boolean((await res.json()).syncSpecial);
+  } catch {
+    /* default to excluding on error */
+  }
+  return false;
+}
+
 // Document name sent to the server: repo-relative path without the .md extension.
 // The server slugs it (e.g. "docs/spec" → "docs-spec") and namespaces it to the account.
 function docNameFor(filePath, root) {
@@ -50,7 +66,9 @@ async function collectMarkdown(dir, root, out = []) {
 // One-shot: push every .md under `root` to the account.
 export async function syncDir(root, { quiet = false } = {}) {
   const creds = await requireCredentials();
-  const files = await collectMarkdown(root, root);
+  const includeSpecial = await syncSpecialEnabled(creds);
+  let files = await collectMarkdown(root, root);
+  if (!includeSpecial) files = files.filter((f) => !isSpecial(f));
   if (!files.length) {
     if (!quiet) console.log('No .md files found.');
     return { ok: 0, fail: 0 };
@@ -74,10 +92,12 @@ export async function syncDir(root, { quiet = false } = {}) {
 // Long-running: watch `root` and push .md files as they're added/changed.
 export async function watchDir(root, { quiet = false } = {}) {
   const creds = await requireCredentials();
+  const includeSpecial = await syncSpecialEnabled(creds);
   const log = (...a) => !quiet && console.log(...a);
 
   const pending = new Map(); // path -> timer (debounce)
   const push = (filePath) => {
+    if (!includeSpecial && isSpecial(filePath)) return; // skip CLAUDE/README/AGENTS by default
     clearTimeout(pending.get(filePath));
     pending.set(
       filePath,

@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   // not a Clerk session cookie — so they must be exempt from Clerk's cookie protection.
   '/api/cli/documents',
   '/api/cli/revoke',
+  '/api/cli/settings',
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
