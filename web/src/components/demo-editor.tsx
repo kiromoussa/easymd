@@ -10,6 +10,7 @@ import { useUser, UserButton } from '@clerk/nextjs';
 import { RoomProvider } from '@liveblocks/react';
 import { EditorCanvas } from '@/components/editor-canvas';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ShareDialog } from '@/components/share-dialog';
 import { Logo } from '@/components/logo';
 
 const COLORS = ['#c6f24e', '#34a853', '#fbbc04', '#ea4335', '#9334e6', '#00acc1'];
@@ -93,6 +94,7 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
   const [toast, setToast] = useState('');
+  const [shareOpen, setShareOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [matches, setMatches] = useState<number[]>([]);
   const [matchIdx, setMatchIdx] = useState(0);
@@ -358,20 +360,12 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
     showToast('Deleted');
   };
 
-  const shareDoc = async () => {
+  const shareDoc = () => {
     if (!user?.id || !activeDoc.startsWith(`${user.id}__`)) {
       showToast('Only the owner can share this doc');
       return;
     }
-    const email = window.prompt('Share with (email of an easymd account):');
-    if (!email) return;
-    const res = await fetch('/api/documents/share', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: activeDoc, email }),
-    });
-    const j = await res.json().catch(() => ({}));
-    showToast(res.ok ? `Shared with ${j.email}` : j.error || 'Share failed');
+    setShareOpen(true);
   };
 
   const insertAtCursor = (text: string) => {
@@ -495,6 +489,16 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
           e.target.value = '';
         }}
       />
+
+      {/* Share dialog (Google-Docs style) */}
+      {shareOpen && (
+        <ShareDialog
+          docName={activeDoc}
+          docTitle={activeTitle}
+          ownerEmail={user?.primaryEmailAddress?.emailAddress ?? 'You'}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
 
       {/* Transient toast */}
       {toast && (
