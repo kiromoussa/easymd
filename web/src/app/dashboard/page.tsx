@@ -1,17 +1,33 @@
 import Link from 'next/link';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { DashboardGrid, type DashboardDoc } from '@/components/dashboard-grid';
 import { Logo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { setRoomAccess } from '@/lib/liveblocks-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// Convert any pending email-invites for this user into real ACL grants, now that they
+// have an account. Runs on dashboard load (cheap; usually finds nothing).
+async function claimInvites(supabase: SupabaseClient, userId: string, email: string) {
+  if (!email) return;
+  const { data: invites } = await supabase.from('document_invites').select('doc_name, role').eq('email', email);
+  if (!invites?.length) return;
+  for (const inv of invites) {
+    await supabase
+      .from('document_acl')
+      .upsert({ doc_name: inv.doc_name, user_id: userId, role: inv.role, invited_by: null }, { onConflict: 'doc_name,user_id' });
+    await setRoomAccess(inv.doc_name, userId, inv.role !== 'viewer').catch(() => {});
+  }
+  await supabase.from('document_invites').delete().eq('email', email);
+}
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -25,6 +41,11 @@ export default async function DashboardPage() {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+
+    // Claim any pending invites addressed to this user's email.
+    const me = await currentUser();
+    await claimInvites(supabase, userId, me?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? '').catch(() => {});
+
     const { data } = await supabase
       .from('documents')
       .select('name, title, updated_at, last_opened_at')

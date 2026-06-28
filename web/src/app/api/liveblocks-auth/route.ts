@@ -25,8 +25,13 @@ async function accessFor(room: string, userId: string): Promise<'write' | 'read'
     .eq('doc_name', room)
     .eq('user_id', userId)
     .maybeSingle();
-  if (!data) return null;
-  return data.role === 'viewer' ? 'read' : 'write';
+  if (data) return data.role === 'viewer' ? 'read' : 'write';
+
+  // "Anyone with the link" fallback (signed-in users).
+  const { data: doc } = await supabase.from('documents').select('link_access').eq('name', room).maybeSingle();
+  if (doc?.link_access === 'edit') return 'write';
+  if (doc?.link_access === 'view') return 'read';
+  return null;
 }
 
 // Access-token auth: authorization is computed here from our own source of truth
