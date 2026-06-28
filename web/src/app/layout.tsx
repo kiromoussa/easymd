@@ -23,13 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkAppearanceProvider>
-      <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
-        <head>
-          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        </head>
-        <body className="min-h-full font-sans antialiased">{children}</body>
-      </html>
-    </ClerkAppearanceProvider>
+    <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="min-h-full font-sans antialiased">
+        <ClerkAppearanceProvider>{children}</ClerkAppearanceProvider>
+      </body>
+    </html>
   );
 }
