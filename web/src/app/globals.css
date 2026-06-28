@@ -301,12 +301,14 @@ body {
 .cl-formButtonPrimary *,
 .dark .cl-formButtonPrimary,
 .dark .cl-formButtonPrimary * {
-  color: #1a1e05 !important;
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important; /* Clerk paints the label via text-fill-color */
 }
 .cl-formButtonPrimary svg,
 .dark .cl-formButtonPrimary svg {
-  fill: #1a1e05 !important;
-  stroke: #1a1e05 !important;
+  fill: #000 !important;
+  stroke: #000 !important;
+  -webkit-text-fill-color: #000 !important;
 }
 
 /* Inputs + social buttons */

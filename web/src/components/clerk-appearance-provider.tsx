@@ -1,6 +1,7 @@
 'use client';
 
 import { ClerkProvider } from '@clerk/nextjs';
+import { ui } from '@clerk/ui';
 import { useEffect, useState } from 'react';
 import { clerkDark, clerkLight } from '@/lib/clerk-appearance';
 
@@ -19,7 +20,7 @@ export function ClerkAppearanceProvider({ children }: { children: React.ReactNod
   }, []);
 
   return (
-    <ClerkProvider key={isDark ? 'dark' : 'light'} appearance={isDark ? clerkDark : clerkLight}>
+    <ClerkProvider key={isDark ? 'dark' : 'light'} ui={ui} appearance={isDark ? clerkDark : clerkLight}>
       {children}
     </ClerkProvider>
   );

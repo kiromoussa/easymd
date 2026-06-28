@@ -17,6 +17,9 @@ export const clerkDark = {
   baseTheme: dark,
   variables: {
     colorPrimary: '#daff76',
+    // This Clerk version uses colorPrimaryForeground for text on the primary button;
+    // colorTextOnPrimaryBackground is the deprecated (ignored) alias.
+    colorPrimaryForeground: '#1a1e05',
     colorTextOnPrimaryBackground: '#1a1e05',
     colorBackground: '#0b0f0e',
     colorInputBackground: '#11151b',
@@ -35,6 +38,7 @@ export const clerkDark = {
 export const clerkLight = {
   variables: {
     colorPrimary: '#daff76',
+    colorPrimaryForeground: '#1a1e05',
     colorTextOnPrimaryBackground: '#1a1e05',
     borderRadius: '0.6rem',
     fontFamily,
