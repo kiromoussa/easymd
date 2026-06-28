@@ -177,6 +177,31 @@ function hashStr(s: string): number {
   return h;
 }
 
+// Raise a conflict/staleness flag when the agent's repo understanding diverges from
+// the spec. Renders as an inline callout in the doc; logged for provenance.
+const FLAG_LABELS: Record<string, { label: string; icon: string }> = {
+  'conflicts-with-code': { label: 'Conflicts with code', icon: '🛑' },
+  'stale-assumption': { label: 'Stale assumption', icon: '⚠️' },
+  'needs-review': { label: 'Needs review', icon: '🔶' },
+};
+
+export async function addFlag(roomId: string, kind: string, note: string, by = 'agent'): Promise<string> {
+  const k = FLAG_LABELS[kind] ? kind : 'needs-review';
+  const { label, icon } = FLAG_LABELS[k];
+  const oneLine = note.replace(/[\r\n]+/g, ' ').trim();
+  const id = `f${Math.abs(hashStr(k + oneLine)).toString(36)}`;
+  const block = `<!-- easymd:flag id="${id}" kind="${k}" -->\n> ${icon} **${label}** — ${oneLine || 'see note'}\n<!-- /easymd:flag -->`;
+  await mutateRoom(roomId, (t) => {
+    const text = t.toString();
+    // Place after the Task State block if present, else at the top.
+    const taskEnd = text.indexOf(TASK_CLOSE);
+    const at = taskEnd !== -1 ? taskEnd + TASK_CLOSE.length : 0;
+    t.insert(at, `${at === 0 ? '' : '\n\n'}${block}${at === 0 ? '\n\n' : ''}`);
+  });
+  await appendLog(roomId, `${by} flagged: ${label}${oneLine ? ` — ${oneLine}` : ''}`);
+  return id;
+}
+
 // Create/merge the Task State block in a room via a minimal Yjs splice (preserves
 // concurrent edits outside the block). Returns the merged state.
 export async function upsertTaskState(roomId: string, partial: TaskState): Promise<TaskState> {

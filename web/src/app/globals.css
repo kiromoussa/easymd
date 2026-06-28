@@ -243,6 +243,18 @@ body {
 }
 .markdown-preview .task-state-card ul { margin-bottom: 0; }
 
+/* Conflict / staleness flags → inline callouts */
+.markdown-preview .flag-card {
+  border-radius: 10px;
+  padding: 0.25rem 1rem;
+  margin: 1em 0;
+  border-left: 4px solid;
+}
+.markdown-preview .flag-card blockquote { border: none; margin: 0.5em 0; font-style: normal; padding-left: 0; }
+.markdown-preview .flag-conflicts-with-code { background: rgba(234, 67, 53, 0.10); border-left-color: #ea4335; }
+.markdown-preview .flag-stale-assumption { background: rgba(251, 188, 4, 0.12); border-left-color: #fbbc04; }
+.markdown-preview .flag-needs-review { background: rgba(198, 242, 78, 0.12); border-left-color: var(--accent-strong); }
+
 /* Thin, theme-aware scrollbars */
 .thin-scroll { scrollbar-width: thin; scrollbar-color: #d0d3d8 transparent; }
 .dark .thin-scroll { scrollbar-color: #2c333d transparent; }

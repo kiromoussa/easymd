@@ -11,6 +11,7 @@ import { RoomProvider } from '@liveblocks/react';
 import { EditorCanvas } from '@/components/editor-canvas';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ShareDialog } from '@/components/share-dialog';
+import { VersionHistory } from '@/components/version-history';
 import { Logo } from '@/components/logo';
 
 const COLORS = ['#c6f24e', '#34a853', '#fbbc04', '#ea4335', '#9334e6', '#00acc1'];
@@ -197,7 +198,13 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
     // Wrap easymd:task / easymd:log fences (HTML comments) into styled cards.
     html = html
       .replace(/(?:<p>\s*)?<!--\s*easymd:(task|log)\s*-->(?:\s*<\/p>)?/g, '<div class="task-state-card">')
-      .replace(/(?:<p>\s*)?<!--\s*\/easymd:(task|log)\s*-->(?:\s*<\/p>)?/g, '</div>');
+      .replace(/(?:<p>\s*)?<!--\s*\/easymd:(task|log)\s*-->(?:\s*<\/p>)?/g, '</div>')
+      // Conflict/staleness flags → inline callout (colored by kind).
+      .replace(/(?:<p>\s*)?<!--\s*easymd:flag\s+([^>]*?)-->(?:\s*<\/p>)?/g, (_m, attrs) => {
+        const kind = /kind="([^"]*)"/.exec(attrs)?.[1] || 'needs-review';
+        return `<div class="flag-card flag-${kind}">`;
+      })
+      .replace(/(?:<p>\s*)?<!--\s*\/easymd:flag\s*-->(?:\s*<\/p>)?/g, '</div>');
     setPreviewHtml(html);
     const hs: Heading[] = [];
     text.split('\n').forEach((line, i) => {
@@ -437,6 +444,19 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
     view.dispatch({ changes: { from: idx, to: end, insert: accept && p.content ? `${p.content}\n\n` : '' } });
     appendLogLine(`you ${accept ? 'accepted' : 'rejected'}: ${p.intent}`);
     showToast(accept ? 'Accepted proposal' : 'Rejected proposal');
+  };
+
+  // Restore a past version: overwrite the live doc with the snapshot's text.
+  const restoreVersion = (text: string) => {
+    const view = viewRef.current;
+    if (!view) {
+      showToast('Open the editor tab first');
+      return;
+    }
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
+    appendLogLine('you restored an earlier version');
+    setTab('editor');
+    showToast('Restored version');
   };
 
   const insertImageFiles = async (files: FileList | File[]) => {
@@ -924,7 +944,11 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
         {/* body */}
         <div className="flex min-h-0 flex-1">
           <div className={`flex min-w-0 flex-1 overflow-auto thin-scroll ${APP} p-3`}>
-            {tab === 'history' && <EmptyState icon={ICONS.clock} title="Version history" body="Every edit is synced live and persisted to Supabase. A full revision timeline isn’t wired up yet." />}
+            {tab === 'history' && activeDoc && (
+              <RoomProvider id={activeDoc} key={`hist-${activeDoc}`} initialPresence={{}}>
+                <VersionHistory onRestore={restoreVersion} />
+              </RoomProvider>
+            )}
             {tab === 'signatures' && <EmptyState icon={ICONS.pen} title="Signatures" body="E-signature collection isn’t wired up yet. The document itself stays canonical markdown." />}
 
             {/* Editor + preview stay mounted across view-mode and tab changes; panes are

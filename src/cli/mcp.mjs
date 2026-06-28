@@ -170,6 +170,28 @@ server.registerTool(
   },
 );
 
+server.registerTool(
+  'flag',
+  {
+    title: 'Flag a conflict or stale assumption',
+    description:
+      'Raise a flag in the document when your understanding of the repo diverges from the spec. Use kind "conflicts-with-code" when the spec contradicts the current code, "stale-assumption" when the spec relies on something no longer true, or "needs-review". It appears as an inline callout in the doc so the human notices the divergence. Include a short note explaining it.',
+    inputSchema: {
+      name: z.string().describe('Document name'),
+      kind: z.enum(['conflicts-with-code', 'stale-assumption', 'needs-review']).describe('Type of flag'),
+      note: z.string().describe('Short explanation of the divergence (e.g. "spec says JWT; src/auth.ts uses sessions")'),
+    },
+  },
+  async ({ name, kind, note }) => {
+    try {
+      await api('/api/cli/documents', { method: 'POST', body: JSON.stringify({ name, op: 'flag', kind, note }) });
+      return ok(`Flagged “${kind}” on "${name}".`);
+    } catch (e) {
+      return fail(e.message);
+    }
+  },
+);
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
 console.error(`easymd MCP ready → ${BASE} ${TOKEN ? '(authenticated)' : '(NOT logged in — run `easymd login`)'}`);
