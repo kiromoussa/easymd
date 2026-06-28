@@ -240,38 +240,58 @@ body {
    Clerk — DARK MODE only (scoped under .dark). In light mode Clerk uses its own
    light theme (black text), so nothing here applies and everything flips correctly.
    ───────────────────────────────────────────── */
+/* Dark surfaces (cards, popovers, modal panels, nav, footer) */
 .dark .cl-card,
+.dark .cl-cardBox,
 .dark .cl-modalContent,
+.dark .cl-popoverBox,
 .dark .cl-userButtonPopoverCard,
-.dark .cl-organizationSwitcherPopoverCard {
+.dark .cl-userButtonPopoverMain,
+.dark .cl-userButtonPopoverFooter,
+.dark .cl-organizationSwitcherPopoverCard,
+.dark .cl-navbar,
+.dark .cl-pageScrollBox,
+.dark .cl-profilePage {
   background-color: #0b0f0e !important;
 }
-/* Primary text (titles, labels, names) */
+
+/* Force ALL Clerk text light in dark mode, then re-assert lime for accents below.
+   The attribute-substring selectors catch every label/subtitle/secondary/hint family
+   across sign-in, user-button, and user-profile without naming each class. */
+.dark .cl-rootBox,
+.dark [class*="cl-"][class*="abel"],
+.dark [class*="cl-"][class*="itle"],
+.dark [class*="cl-"][class*="ubtitle"],
+.dark [class*="cl-"][class*="econdary"],
+.dark [class*="cl-"][class*="int"],
+.dark [class*="cl-"][class*="escription"],
+.dark [class*="cl-"][class*="dentifier"],
 .dark .cl-headerTitle,
-.dark .cl-formFieldLabel,
-.dark .cl-userPreviewMainIdentifier,
-.dark .cl-userButtonPopoverActionButton,
-.dark .cl-userButtonPopoverActionButton__manageAccount,
+.dark .cl-navbarButton,
+.dark .cl-accordionTriggerButton,
+.dark .cl-breadcrumbsItem,
 .dark .cl-menuButton,
-.dark .cl-formFieldInput {
-  color: #e8ffef !important;
-}
-/* Secondary / subtext — white too (per design) */
-.dark .cl-headerSubtitle,
+.dark .cl-selectButton,
+.dark .cl-badge,
 .dark .cl-dividerText,
-.dark .cl-footerActionText,
-.dark .cl-formFieldHintText,
-.dark .cl-formFieldInfoText,
-.dark .cl-identityPreviewText,
-.dark .cl-socialButtonsBlockButtonText,
-.dark .cl-userPreviewSecondaryIdentifier,
-.dark .cl-formResendCodeLink,
 .dark .cl-footer,
-.dark .cl-footer * {
+.dark .cl-footer *,
+.dark .cl-formFieldInput,
+.dark .cl-userButtonPopoverActionButton {
   color: #e8ffef !important;
 }
+
+/* Lime accents (links + primary actions) */
 .dark .cl-footerActionLink,
-.dark .cl-formFieldAction { color: #daff76 !important; }
+.dark .cl-formFieldAction,
+.dark .cl-profileSectionPrimaryButton,
+.dark .cl-formButtonReset,
+.dark .cl-navbarButton[data-active="true"],
+.dark .cl-accordionTriggerButton[aria-expanded="true"] {
+  color: #daff76 !important;
+}
+
+/* Inputs + social buttons */
 .dark .cl-formFieldInput {
   background-color: #11151b !important;
   border-color: rgba(232, 255, 239, 0.22) !important;
@@ -281,4 +301,5 @@ body {
   background-color: #11151b !important;
   border-color: rgba(232, 255, 239, 0.18) !important;
 }
-.dark .cl-userButtonPopoverActionButton:hover { background-color: rgba(232, 255, 239, 0.06) !important; }
+.dark .cl-userButtonPopoverActionButton:hover,
+.dark .cl-navbarButton:hover { background-color: rgba(232, 255, 239, 0.06) !important; }

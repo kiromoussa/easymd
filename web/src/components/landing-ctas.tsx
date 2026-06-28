@@ -2,19 +2,11 @@
 
 import Link from 'next/link';
 import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/nextjs';
-import { dark } from '@clerk/themes';
+import { clerkDark } from '@/lib/clerk-appearance';
 
 // The landing is always dark, so its auth modals are forced dark regardless of the
 // user's theme (this per-button appearance only affects these flows).
-const landingClerk = {
-  baseTheme: dark,
-  variables: {
-    colorPrimary: '#daff76',
-    colorTextOnPrimaryBackground: '#1a1e05',
-    borderRadius: '0.6rem',
-    fontFamily: 'var(--font-inter), ui-sans-serif, system-ui, sans-serif',
-  },
-};
+const landingClerk = clerkDark;
 
 const primary =
   'rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]';
