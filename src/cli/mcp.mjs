@@ -120,6 +120,34 @@ server.registerTool(
   },
 );
 
+server.registerTool(
+  'update_task_state',
+  {
+    title: 'Update task state',
+    description:
+      'Update the document\'s "Task State" block — the shared execution-handoff surface between humans and agents. Only the fields you pass change; the rest are preserved. Use this to keep the doc reflecting the current goal, decisions, open questions, failed approaches, the last command you validated (with its result), and the next concrete action. Updates appear live in the open editor.',
+    inputSchema: {
+      name: z.string().describe('Document name'),
+      goal: z.string().optional().describe('Current goal / what we are trying to achieve'),
+      decisions: z.string().optional().describe('Decisions made so far'),
+      openQuestions: z.string().optional().describe('Unresolved questions'),
+      failedApproaches: z.string().optional().describe('Approaches tried that did not work'),
+      lastValidated: z.string().optional().describe('Last command you ran to validate, and its result (e.g. "`npm test` → 18 passing, 2 failing")'),
+      nextAction: z.string().optional().describe('The next concrete action'),
+    },
+  },
+  async ({ name, ...fields }) => {
+    try {
+      const state = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined && v !== ''));
+      if (!Object.keys(state).length) return fail('Provide at least one field to update.');
+      await api('/api/cli/documents', { method: 'POST', body: JSON.stringify({ name, op: 'task', state }) });
+      return ok(`Updated Task State for "${name}" (${Object.keys(state).join(', ')}).`);
+    } catch (e) {
+      return fail(e.message);
+    }
+  },
+);
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
 console.error(`easymd MCP ready → ${BASE} ${TOKEN ? '(authenticated)' : '(NOT logged in — run `easymd login`)'}`);

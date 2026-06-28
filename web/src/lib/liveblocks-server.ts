@@ -94,3 +94,70 @@ export const appendRoomText = (roomId: string, text: string) =>
     t.insert(t.length, prefix + text);
     return t.length;
   });
+
+// ── Task State block: the human/agent execution-handoff surface ───────────────────
+// Lives between stable HTML-comment fences so agents have a reliable anchor and humans
+// never write YAML. Fields are merged (only provided ones change).
+export type TaskState = Partial<{
+  goal: string;
+  decisions: string;
+  openQuestions: string;
+  failedApproaches: string;
+  lastValidated: string;
+  nextAction: string;
+}>;
+
+const TASK_OPEN = '<!-- easymd:task -->';
+const TASK_CLOSE = '<!-- /easymd:task -->';
+const TASK_FIELDS: [keyof TaskState, string][] = [
+  ['goal', 'Goal'],
+  ['decisions', 'Decisions'],
+  ['openQuestions', 'Open questions'],
+  ['failedApproaches', 'Failed approaches'],
+  ['lastValidated', 'Last validated'],
+  ['nextAction', 'Next action'],
+];
+
+function renderTaskBlock(s: TaskState): string {
+  const lines = [TASK_OPEN, '## 📍 Task State'];
+  for (const [key, label] of TASK_FIELDS) lines.push(`- **${label}:** ${s[key]?.trim() || '—'}`);
+  lines.push(TASK_CLOSE);
+  return lines.join('\n');
+}
+
+function parseTaskBlock(region: string): TaskState {
+  const out: TaskState = {};
+  for (const [key, label] of TASK_FIELDS) {
+    const m = new RegExp(`-\\s*\\*\\*${label}:\\*\\*\\s*(.*)`).exec(region);
+    if (m) {
+      const v = m[1].trim();
+      if (v && v !== '—') out[key] = v;
+    }
+  }
+  return out;
+}
+
+// Create/merge the Task State block in a room via a minimal Yjs splice (preserves
+// concurrent edits outside the block). Returns the merged state.
+export async function upsertTaskState(roomId: string, partial: TaskState): Promise<TaskState> {
+  return mutateRoom(roomId, (t) => {
+    const text = t.toString();
+    const start = text.indexOf(TASK_OPEN);
+    let existing: TaskState = {};
+    let regionLen = 0;
+    if (start !== -1) {
+      const endIdx = text.indexOf(TASK_CLOSE, start);
+      regionLen = endIdx !== -1 ? endIdx + TASK_CLOSE.length - start : t.length - start;
+      existing = parseTaskBlock(text.slice(start, start + regionLen));
+    }
+    const merged: TaskState = { ...existing, ...partial };
+    const block = renderTaskBlock(merged);
+    if (start !== -1) {
+      t.delete(start, regionLen);
+      t.insert(start, block);
+    } else {
+      t.insert(0, `${block}\n\n`);
+    }
+    return merged;
+  });
+}

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyCliToken, bearerFrom, isTokenActive } from '@/lib/cli-token';
 import { limited } from '@/lib/rate-limit';
-import { ensureRoom, readRoomText, replaceRoomText, appendRoomText } from '@/lib/liveblocks-server';
+import { ensureRoom, readRoomText, replaceRoomText, appendRoomText, upsertTaskState } from '@/lib/liveblocks-server';
 
 export const runtime = 'nodejs';
 
@@ -71,6 +71,17 @@ export async function POST(req: Request) {
 
   try {
     await ensureRoom(room, userId);
+
+    if (body?.op === 'task') {
+      const merged = await upsertTaskState(room, (body.state as Record<string, string>) || {});
+      const supabase = supa();
+      if (supabase) {
+        await supabase
+          .from('documents')
+          .upsert({ name: room, owner_id: userId, state: '', updated_at: new Date().toISOString() }, { onConflict: 'name' });
+      }
+      return Response.json({ name: room, taskState: merged });
+    }
 
     if (body?.op === 'append') {
       const text = typeof body?.text === 'string' ? body.text : '';
