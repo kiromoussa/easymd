@@ -13,7 +13,7 @@ export function HeroCtas() {
       </SignUpButton>
       <Link
         href="/sign-in"
-        className="rounded-full border border-slate-300 px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        className="rounded-full border border-slate-300 px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-white/20 dark:text-slate-200 dark:hover:bg-white/10"
       >
         Sign in
       </Link>

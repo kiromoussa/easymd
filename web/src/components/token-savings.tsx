@@ -40,16 +40,16 @@ const reasons = [
 export function TokenSavingsSection() {
   return (
     <>
-      <section id="tokens" className="border-t border-slate-200 bg-white py-24">
+      <section id="tokens" className="border-t border-slate-200 bg-white py-24 dark:border-white/10 dark:bg-slate-950">
         <div className="mx-auto max-w-6xl px-6">
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-wider text-[#1a73e8]">
+            <p className="text-sm font-semibold uppercase tracking-wider text-[#1a73e8] dark:text-blue-400">
               Token economics
             </p>
-            <h2 className="mt-3 text-3xl font-normal tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="mt-3 text-3xl font-normal tracking-tight text-slate-900 sm:text-4xl dark:text-white">
               Clean Markdown saves a massive number of tokens
             </h2>
-            <p className="mt-4 text-lg leading-relaxed text-slate-600">
+            <p className="mt-4 text-lg leading-relaxed text-slate-600 dark:text-slate-300">
               Converting unstructured text, PDFs, Word documents, or HTML to plain
               .md removes hidden formatting metadata — font styles, XML tags, CSS —
               while preserving the structure models actually use.
@@ -60,27 +60,27 @@ export function TokenSavingsSection() {
             {stats.map((item) => (
               <div
                 key={item.format}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50 shadow-sm"
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50 shadow-sm dark:border-white/10 dark:bg-slate-900"
               >
                 <div className={`bg-gradient-to-br ${item.tone} px-6 py-8 text-white`}>
                   <p className="text-sm font-medium text-white/80">{item.format}</p>
                   <p className="mt-2 text-4xl font-light tracking-tight">{item.savings}</p>
                   <p className="mt-1 text-sm text-white/90">typical token reduction</p>
                 </div>
-                <p className="px-6 py-5 text-sm leading-relaxed text-slate-600">{item.detail}</p>
+                <p className="px-6 py-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{item.detail}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="why-markdown" className="border-t border-slate-200 bg-[#f8f9fa] py-24">
+      <section id="why-markdown" className="border-t border-slate-200 bg-[#f8f9fa] py-24 dark:border-white/10 dark:bg-slate-900">
         <div className="mx-auto max-w-6xl px-6">
           <div className="max-w-3xl">
-            <h2 className="text-3xl font-normal tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="text-3xl font-normal tracking-tight text-slate-900 sm:text-4xl dark:text-white">
               Why it helps your AI workflow
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
               Markdown is not just prettier — it is cheaper, faster, and agent-native.
             </p>
           </div>
@@ -89,11 +89,11 @@ export function TokenSavingsSection() {
             {reasons.map((item) => (
               <article
                 key={item.title}
-                className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
+                className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-white/10 dark:bg-slate-950"
               >
-                <span className="text-2xl text-[#1a73e8]">{item.icon}</span>
-                <h3 className="mt-4 text-xl font-medium text-slate-900">{item.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.body}</p>
+                <span className="text-2xl text-[#1a73e8] dark:text-blue-400">{item.icon}</span>
+                <h3 className="mt-4 text-xl font-medium text-slate-900 dark:text-white">{item.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{item.body}</p>
               </article>
             ))}
           </div>
