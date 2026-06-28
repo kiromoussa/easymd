@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "easymd": {
+      "command": "node",
+      "args": ["web/scripts/mcp-server.mjs"]
+    }
+  }
+}
