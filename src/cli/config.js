@@ -6,8 +6,8 @@ export const CONFIG_DIR = join(homedir(), '.easymd');
 const CRED_FILE = join(CONFIG_DIR, 'credentials.json');
 const AUTO_FILE = join(CONFIG_DIR, 'auto.json');
 
-// Where the easymd web app lives. Override with EASYMD_URL for self-hosted / production.
-export const DEFAULT_URL = process.env.EASYMD_URL || 'http://localhost:3000';
+// Where the easymd web app lives. Override with EASYMD_URL for local dev / self-hosting.
+export const DEFAULT_URL = process.env.EASYMD_URL || 'https://www.easymd.tech';
 
 async function readJson(p) {
   try {
