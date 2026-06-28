@@ -15,6 +15,8 @@ export const metadata: Metadata = {
     'Collaborate on CLAUDE.md and AGENTS.md in real time. Clean markdown saves 40–90% tokens vs HTML, DOCX, and PDF. The file on disk stays canonical.',
 };
 
+const themeScript = `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,7 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className={`${roboto.variable} h-full`}>
+      <html lang="en" className={`${roboto.variable} h-full`} suppressHydrationWarning>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        </head>
         <body className="min-h-full font-sans antialiased">{children}</body>
       </html>
     </ClerkProvider>
