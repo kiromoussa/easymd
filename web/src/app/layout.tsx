@@ -1,24 +1,7 @@
 import type { Metadata } from 'next';
-import { ClerkProvider } from '@clerk/nextjs';
-import { dark } from '@clerk/themes';
 import { Inter } from 'next/font/google';
+import { ClerkAppearanceProvider } from '@/components/clerk-appearance-provider';
 import './globals.css';
-
-// Match easymd's dark + lime palette on all Clerk UI (modals, sign-in/up pages).
-const clerkAppearance = {
-  baseTheme: dark,
-  variables: {
-    colorPrimary: '#daff76',
-    colorTextOnPrimaryBackground: '#333804',
-    colorBackground: '#0b0f0e',
-    colorInputBackground: '#11151b',
-    colorText: '#e8ffef',
-    colorTextSecondary: 'rgba(232,255,239,0.72)',
-    colorInputText: '#e8ffef',
-    borderRadius: '0.6rem',
-    fontFamily: 'var(--font-inter), ui-sans-serif, system-ui, sans-serif',
-  },
-};
 
 const inter = Inter({
   weight: ['400', '500', '600', '700'],
@@ -40,13 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider appearance={clerkAppearance}>
+    <ClerkAppearanceProvider>
       <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
         <head>
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         </head>
         <body className="min-h-full font-sans antialiased">{children}</body>
       </html>
-    </ClerkProvider>
+    </ClerkAppearanceProvider>
   );
 }

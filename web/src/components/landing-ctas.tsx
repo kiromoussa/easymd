@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { SignInButton, SignUpButton, useAuth } from '@clerk/nextjs';
+import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/nextjs';
 
 const primary =
   'rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]';
@@ -15,18 +15,21 @@ export function HeaderCtas() {
 
   if (isSignedIn) {
     return (
-      <Link href="/dashboard" className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]">
-        Dashboard
-      </Link>
+      <div className="flex items-center gap-2.5">
+        <Link href="/dashboard" className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]">
+          Dashboard
+        </Link>
+        <UserButton />
+      </div>
     );
   }
 
   return (
     <div className="flex items-center gap-2">
-      <SignInButton mode="modal">
+      <SignInButton mode="modal" forceRedirectUrl="/dashboard" signUpForceRedirectUrl="/dashboard">
         <button className="px-3 py-2 text-sm text-[var(--mint-muted)] transition hover:text-[var(--mint)]">Sign in</button>
       </SignInButton>
-      <SignUpButton mode="modal">
+      <SignUpButton mode="modal" forceRedirectUrl="/dashboard" signInForceRedirectUrl="/dashboard">
         <button className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]">
           Get started
         </button>
@@ -44,7 +47,7 @@ export function HeroCtas() {
           Open dashboard
         </Link>
       ) : (
-        <SignUpButton mode="modal">
+        <SignUpButton mode="modal" forceRedirectUrl="/dashboard" signInForceRedirectUrl="/dashboard">
           <button className={primary}>Get started</button>
         </SignUpButton>
       )}
@@ -66,7 +69,7 @@ export function FooterCtas() {
           Open your dashboard →
         </Link>
       ) : (
-        <SignUpButton mode="modal">
+        <SignUpButton mode="modal" forceRedirectUrl="/dashboard" signInForceRedirectUrl="/dashboard">
           <button className={dark}>Get started free →</button>
         </SignUpButton>
       )}

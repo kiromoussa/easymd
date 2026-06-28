@@ -235,3 +235,50 @@ body {
   background-clip: content-box;
 }
 .dark .thin-scroll::-webkit-scrollbar-thumb { background: #2c333d; }
+
+/* ─────────────────────────────────────────────
+   Clerk — DARK MODE only (scoped under .dark). In light mode Clerk uses its own
+   light theme (black text), so nothing here applies and everything flips correctly.
+   ───────────────────────────────────────────── */
+.dark .cl-card,
+.dark .cl-modalContent,
+.dark .cl-userButtonPopoverCard,
+.dark .cl-organizationSwitcherPopoverCard {
+  background-color: #0b0f0e !important;
+}
+/* Primary text (titles, labels, names) */
+.dark .cl-headerTitle,
+.dark .cl-formFieldLabel,
+.dark .cl-userPreviewMainIdentifier,
+.dark .cl-userButtonPopoverActionButton,
+.dark .cl-userButtonPopoverActionButton__manageAccount,
+.dark .cl-menuButton,
+.dark .cl-formFieldInput {
+  color: #e8ffef !important;
+}
+/* Secondary / subtext — white too (per design) */
+.dark .cl-headerSubtitle,
+.dark .cl-dividerText,
+.dark .cl-footerActionText,
+.dark .cl-formFieldHintText,
+.dark .cl-formFieldInfoText,
+.dark .cl-identityPreviewText,
+.dark .cl-socialButtonsBlockButtonText,
+.dark .cl-userPreviewSecondaryIdentifier,
+.dark .cl-formResendCodeLink,
+.dark .cl-footer,
+.dark .cl-footer * {
+  color: #e8ffef !important;
+}
+.dark .cl-footerActionLink,
+.dark .cl-formFieldAction { color: #daff76 !important; }
+.dark .cl-formFieldInput {
+  background-color: #11151b !important;
+  border-color: rgba(232, 255, 239, 0.22) !important;
+}
+.dark .cl-formFieldInput::placeholder { color: rgba(232, 255, 239, 0.5) !important; }
+.dark .cl-socialButtonsBlockButton {
+  background-color: #11151b !important;
+  border-color: rgba(232, 255, 239, 0.18) !important;
+}
+.dark .cl-userButtonPopoverActionButton:hover { background-color: rgba(232, 255, 239, 0.06) !important; }

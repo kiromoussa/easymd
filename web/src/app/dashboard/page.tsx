@@ -5,6 +5,7 @@ import { UserButton } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 import { DashboardGrid, type DashboardDoc } from '@/components/dashboard-grid';
 import { Logo } from '@/components/logo';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,7 +52,10 @@ export default async function DashboardPage() {
           <Logo className="h-8 w-8 text-slate-900 dark:text-white" />
           <span className="text-sm font-semibold text-slate-900 dark:text-white">easymd</span>
         </Link>
-        <UserButton />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <UserButton />
+        </div>
       </header>
       <DashboardGrid initialDocs={docs} configured={configured} ownerId={userId} />
     </div>

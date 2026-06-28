@@ -98,6 +98,9 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
   const [toast, setToast] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [matches, setMatches] = useState<number[]>([]);
+  const [matchIdx, setMatchIdx] = useState(0);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -510,19 +513,47 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
 
   const handlePickImage = () => imageInputRef.current?.click();
 
-  const runSearch = (q: string) => {
+  const selectMatch = (pos: number, len: number) => {
     const view = viewRef.current;
-    if (!view || !q) return;
-    const hay = view.state.doc.toString().toLowerCase();
-    const start = view.state.selection.main.to;
-    let idx = hay.indexOf(q.toLowerCase(), start);
-    if (idx === -1) idx = hay.indexOf(q.toLowerCase(), 0);
-    if (idx === -1) {
-      showToast('Not found');
+    if (!view) return;
+    view.dispatch({ selection: EditorSelection.range(pos, pos + len), scrollIntoView: true });
+    view.focus();
+  };
+
+  // Recompute all match positions for a query and jump to the first.
+  const runSearch = (q: string) => {
+    setSearchQuery(q);
+    const view = viewRef.current;
+    if (!view || !q) {
+      setMatches([]);
+      setMatchIdx(0);
       return;
     }
-    view.dispatch({ selection: EditorSelection.range(idx, idx + q.length), scrollIntoView: true });
-    view.focus();
+    const hay = view.state.doc.toString().toLowerCase();
+    const needle = q.toLowerCase();
+    const found: number[] = [];
+    let i = hay.indexOf(needle);
+    while (i !== -1) {
+      found.push(i);
+      i = hay.indexOf(needle, i + Math.max(1, needle.length));
+    }
+    setMatches(found);
+    setMatchIdx(0);
+    if (found.length) selectMatch(found[0], q.length);
+  };
+
+  // Cycle to the next/previous match (wraps around).
+  const goMatch = (dir: 1 | -1) => {
+    if (!matches.length) return;
+    const next = (matchIdx + dir + matches.length) % matches.length;
+    setMatchIdx(next);
+    selectMatch(matches[next], searchQuery.length);
+  };
+
+  const closeSearch = () => {
+    setSearchQuery('');
+    setMatches([]);
+    setMatchIdx(0);
   };
 
   // Keep CodeMirror's keymap (⌘S) and paste/drop pointed at the latest closures.
@@ -570,6 +601,41 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
       {toast && (
         <div className="pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black/85 px-4 py-2 text-sm font-medium text-white shadow-lg dark:bg-white/90 dark:text-black">
           {toast}
+        </div>
+      )}
+
+      {/* Search results bar — bottom-left, with match count + prev/next */}
+      {searchQuery && (
+        <div className={`fixed bottom-4 left-4 z-50 flex items-center gap-1 rounded-lg border ${BORDER} ${PANEL} px-2 py-1.5 shadow-lg`}>
+          <span className={`px-1.5 text-xs tabular-nums ${matches.length ? TEXT : MUTED2}`}>
+            {matches.length ? `${matchIdx + 1} of ${matches.length}` : 'No matches'}
+          </span>
+          <button
+            type="button"
+            title="Previous match (Shift+Enter)"
+            onClick={() => goMatch(-1)}
+            disabled={!matches.length}
+            className={`flex h-7 w-7 items-center justify-center rounded-md ${MUTED} ${HOVER} transition disabled:opacity-40`}
+          >
+            <Icon path={ICONS.chevron} className="h-4 w-4 rotate-180" />
+          </button>
+          <button
+            type="button"
+            title="Next match (Enter)"
+            onClick={() => goMatch(1)}
+            disabled={!matches.length}
+            className={`flex h-7 w-7 items-center justify-center rounded-md ${MUTED} ${HOVER} transition disabled:opacity-40`}
+          >
+            <Icon path={ICONS.chevron} className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            title="Close search"
+            onClick={closeSearch}
+            className={`flex h-7 w-7 items-center justify-center rounded-md ${MUTED} ${HOVER} transition`}
+          >
+            <span className="text-sm leading-none">✕</span>
+          </button>
         </div>
       )}
 
@@ -732,20 +798,36 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
               ref={searchInputRef}
               type="text"
               placeholder="Search document"
+              value={searchQuery}
+              onChange={(e) => runSearch(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  runSearch((e.target as HTMLInputElement).value);
+                  goMatch(e.shiftKey ? -1 : 1);
                 } else if (e.key === 'Escape') {
+                  closeSearch();
                   (e.target as HTMLInputElement).blur();
                 }
               }}
-              className={`w-full rounded-lg border ${BORDER} ${APP} py-1.5 pl-9 pr-12 text-sm ${TEXT} placeholder:text-[#80868b] focus:border-[var(--accent-strong)] focus:outline-none`}
+              className={`w-full rounded-lg border ${BORDER} ${APP} py-1.5 pl-9 pr-16 text-sm ${TEXT} placeholder:text-[#80868b] focus:border-[var(--accent-strong)] focus:outline-none`}
             />
-            <span className={`absolute right-3 text-xs ${MUTED2}`}>⌘K</span>
+            <span className={`absolute right-3 text-xs ${MUTED2}`}>
+              {searchQuery ? (matches.length ? `${matchIdx + 1}/${matches.length}` : '0/0') : '⌘K'}
+            </span>
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">
+            {user?.id && activeDoc.startsWith(`${user.id}__`) && (
+              <button
+                type="button"
+                onClick={shareDoc}
+                title="Share this document"
+                className="flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]"
+              >
+                <Icon path={ICONS.users} className="h-4 w-4" />
+                Share
+              </button>
+            )}
             <ThemeToggle />
             <div className="ml-1">
               <UserButton />

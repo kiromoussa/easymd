@@ -8,6 +8,7 @@ import { syncDir, watchDir } from '../src/cli/sync.js';
 import { autoOn, autoOff, autoStatus } from '../src/cli/auto.js';
 import { getCredentials } from '../src/cli/config.js';
 import { mcpInstall } from '../src/cli/mcp-install.js';
+import { hookInstall, hookUninstall } from '../src/cli/hook-install.js';
 
 const HELP = `
 easymd — collaborate on markdown files in your repo, live with humans and AI agents
@@ -26,6 +27,8 @@ Usage:
 
   easymd mcp                   Run the MCP server (stdio) so AI agents can edit your docs
   easymd mcp-install [agent]   Register the MCP server with Cursor / Claude (agent: --cursor | --claude-desktop)
+  easymd hook-install          Auto-sync .md to your account after every Claude Code session (everywhere)
+  easymd hook-uninstall        Remove the auto-sync hook
 
   easymd open <file>           Open a local .md for real-time collaborative editing in the browser
   easymd open <file> --port N  Use a fixed port (default: random)
@@ -164,6 +167,10 @@ async function main() {
       return;
     case 'mcp-install':
       return mcpInstall(rest[0]);
+    case 'hook-install':
+      return hookInstall();
+    case 'hook-uninstall':
+      return hookUninstall();
     case 'open':
       return cmdOpen(rest);
     default:
