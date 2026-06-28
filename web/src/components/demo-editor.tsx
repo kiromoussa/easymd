@@ -2,21 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
-import { EditorState, EditorSelection } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, drawSelection } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands';
-import { markdown } from '@codemirror/lang-markdown';
-import { yCollab } from 'y-codemirror.next';
+import { EditorSelection } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
+import { undo, redo } from '@codemirror/commands';
 import { marked } from 'marked';
 import { useUser, UserButton } from '@clerk/nextjs';
+import { RoomProvider } from '@liveblocks/react';
+import { EditorCanvas } from '@/components/editor-canvas';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Logo } from '@/components/logo';
 
 const COLORS = ['#c6f24e', '#34a853', '#fbbc04', '#ea4335', '#9334e6', '#00acc1'];
 const DEMO_BASE = 'welcome';
-const WS_URL = process.env.NEXT_PUBLIC_COLLAB_WS_URL || 'ws://localhost:3848';
 
 const prettify = (n: string) => n.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 // Room ids are namespaced "<owner_id>__<slug>"; show only the friendly part.
@@ -80,9 +77,7 @@ const ICONS = {
 };
 
 export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
-  const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const providerRef = useRef<WebsocketProvider | null>(null);
   const { user } = useUser();
 
   const [tab, setTab] = useState<Tab>('editor');
@@ -182,105 +177,9 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
     setHeadings(hs);
   }, []);
 
-  useEffect(() => {
-    if (!editorRef.current || viewRef.current || !activeDoc) return;
-    let cancelled = false;
-    let cleanup = () => {};
-
-    (async () => {
-      // Obtain a short-lived access ticket for this room. The route is Clerk-protected
-      // and only issues tickets for rooms this account owns.
-      let ticket = '';
-      try {
-        const res = await fetch(`/api/collab-ticket?doc=${encodeURIComponent(activeDoc)}`);
-        if (res.ok) ticket = (await res.json()).ticket || '';
-      } catch {
-        /* network error — connection will be rejected if the server requires auth */
-      }
-      if (cancelled || !editorRef.current || viewRef.current) return;
-
-      const ydoc = new Y.Doc();
-      const ytext = ydoc.getText('markdown');
-      const provider = new WebsocketProvider(WS_URL, activeDoc, ydoc, {
-        params: ticket ? { ticket } : {},
-      });
-      providerRef.current = provider;
-
-      const displayName =
-        user?.firstName || user?.username || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'You';
-      const userColor = COLORS[(displayName.charCodeAt(0) || 0) % COLORS.length];
-
-      provider.awareness.setLocalStateField('user', { name: displayName, color: userColor });
-      provider.on('status', ({ status: s }: { status: string }) =>
-        setStatus(s === 'connected' ? 'connected' : 'connecting'),
-      );
-      provider.on('connection-close', () => setStatus('disconnected'));
-
-      const updatePeers = () => setPeerCount(provider.awareness.getStates().size);
-      provider.awareness.on('change', updatePeers);
-      updatePeers();
-
-      const undoManager = new Y.UndoManager(ytext);
-
-      const state = EditorState.create({
-        doc: ytext.toString(),
-        extensions: [
-          lineNumbers(),
-          drawSelection(),
-          history(),
-          markdown(),
-          keymap.of([
-            { key: 'Mod-s', preventDefault: true, run: () => { handlersRef.current.save(); return true; } },
-            ...defaultKeymap,
-            ...historyKeymap,
-          ]),
-          yCollab(ytext, provider.awareness, { undoManager }),
-          EditorView.lineWrapping,
-          EditorView.domEventHandlers({
-            paste: (e) => {
-              const files = e.clipboardData?.files;
-              if (files && files.length && Array.from(files).some((f) => f.type.startsWith('image/'))) {
-                handlersRef.current.insertImageFiles(files);
-                e.preventDefault();
-                return true;
-              }
-              return false;
-            },
-            drop: (e) => {
-              const files = e.dataTransfer?.files;
-              if (files && files.length && Array.from(files).some((f) => f.type.startsWith('image/'))) {
-                handlersRef.current.insertImageFiles(files);
-                e.preventDefault();
-                return true;
-              }
-              return false;
-            },
-          }),
-          EditorView.updateListener.of((update) => {
-            if (update.docChanged) refreshDerived(update.state.doc.toString());
-          }),
-          EditorView.theme({ '&': { height: '100%', backgroundColor: 'transparent' } }),
-        ],
-      });
-
-      const view = new EditorView({ state, parent: editorRef.current });
-      viewRef.current = view;
-      refreshDerived(view.state.doc.toString());
-
-      cleanup = () => {
-        view.destroy();
-        provider.destroy();
-        ydoc.destroy();
-        viewRef.current = null;
-        providerRef.current = null;
-      };
-    })();
-
-    return () => {
-      cancelled = true;
-      cleanup();
-    };
-  }, [user, refreshDerived, activeDoc]);
+  const displayName =
+    user?.firstName || user?.username || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'You';
+  const userColor = COLORS[(displayName.charCodeAt(0) || 0) % COLORS.length];
 
   const wrapInline = useCallback((before: string, after = before) => {
     const view = viewRef.current;
@@ -940,7 +839,19 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
                 } min-w-0 overflow-hidden rounded-xl border ${BORDER} ${CANVAS} shadow-sm transition-all duration-300 ease-in-out`}
               >
                 <div className="demo-editor h-full min-h-[60vh]" style={{ ['--zoom' as string]: zoom / 100 }}>
-                  <div ref={editorRef} className="h-full" />
+                  {activeDoc && (
+                    <RoomProvider id={activeDoc} key={activeDoc} initialPresence={{}}>
+                      <EditorCanvas
+                        viewRef={viewRef}
+                        onText={refreshDerived}
+                        onStatus={setStatus}
+                        onPeers={setPeerCount}
+                        handlersRef={handlersRef}
+                        userName={displayName}
+                        userColor={userColor}
+                      />
+                    </RoomProvider>
+                  )}
                 </div>
               </section>
               <section

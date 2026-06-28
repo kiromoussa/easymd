@@ -5,13 +5,15 @@ import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/nextjs';
 import { clerkDark } from '@/lib/clerk-appearance';
 
 // The landing is always dark, so its auth modals are forced dark regardless of the
-// user's theme (this per-button appearance only affects these flows).
-const landingClerk = clerkDark;
+// user's theme (this per-button appearance only affects these flows). The marker class
+// on the card lets CSS force the primary button's text black — landing modals only.
+const landingClerk = {
+  ...clerkDark,
+  elements: { ...(clerkDark.elements ?? {}), card: 'easymd-landing-clerk' },
+};
 
 const primary =
   'rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]';
-const ghost =
-  'rounded-full border border-[var(--hairline)] px-6 py-3 text-sm font-medium text-[var(--mint)] transition hover:bg-white/5';
 
 export function HeaderCtas() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -56,9 +58,6 @@ export function HeroCtas() {
           <button className={primary}>Get started</button>
         </SignUpButton>
       )}
-      <a href="#workflow" className={ghost}>
-        See workflow
-      </a>
     </div>
   );
 }

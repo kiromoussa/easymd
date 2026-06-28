@@ -291,6 +291,24 @@ body {
   color: #daff76 !important;
 }
 
+/* Primary button sits on the lime fill — its label + arrow must always be dark ink.
+   Two rules are needed:
+   • The unscoped rule covers the landing page, where the auth modal is forced to the
+     dark Clerk theme even when the site (html) is in light mode, so `.dark` never matches.
+   • The `.dark`-scoped rule has higher specificity so it beats the blanket
+     ".dark .cl-rootBox { color: light }" override on genuinely dark pages. */
+.cl-formButtonPrimary,
+.cl-formButtonPrimary *,
+.dark .cl-formButtonPrimary,
+.dark .cl-formButtonPrimary * {
+  color: #1a1e05 !important;
+}
+.cl-formButtonPrimary svg,
+.dark .cl-formButtonPrimary svg {
+  fill: #1a1e05 !important;
+  stroke: #1a1e05 !important;
+}
+
 /* Inputs + social buttons */
 .dark .cl-formFieldInput {
   background-color: #11151b !important;

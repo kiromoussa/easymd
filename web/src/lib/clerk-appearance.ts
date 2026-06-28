@@ -4,6 +4,15 @@ import { dark } from '@clerk/themes';
 // EXPLICIT color variables (which Clerk applies to the whole card incl. footer).
 const fontFamily = 'var(--font-inter), ui-sans-serif, system-ui, sans-serif';
 
+// The lime primary button needs dark text/icon. The `dark` baseTheme forces the
+// button foreground to white, so override it explicitly at the element level.
+const primaryButton = {
+  color: '#1a1e05',
+  '& *': { color: '#1a1e05' },
+  '& svg': { color: '#1a1e05', stroke: '#1a1e05' },
+  '&:hover': { color: '#1a1e05' },
+};
+
 export const clerkDark = {
   baseTheme: dark,
   variables: {
@@ -18,6 +27,9 @@ export const clerkDark = {
     borderRadius: '0.6rem',
     fontFamily,
   },
+  elements: {
+    formButtonPrimary: primaryButton,
+  },
 };
 
 export const clerkLight = {
@@ -26,5 +38,8 @@ export const clerkLight = {
     colorTextOnPrimaryBackground: '#1a1e05',
     borderRadius: '0.6rem',
     fontFamily,
+  },
+  elements: {
+    formButtonPrimary: primaryButton,
   },
 };

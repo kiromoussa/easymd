@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
-import * as Y from 'yjs';
+import { ensureRoom, replaceRoomText } from '@/lib/liveblocks-server';
 
 export const runtime = 'nodejs';
 
@@ -65,14 +65,13 @@ export async function POST(req: Request) {
       ? body.content
       : `# ${title}\n\nStart writing — humans and AI agents edit this document together.\n`;
 
-  // Build the initial Yjs document state so it loads correctly when opened.
-  const ydoc = new Y.Doc();
-  ydoc.getText('markdown').insert(0, initial);
-  const state = Buffer.from(Y.encodeStateAsUpdate(ydoc)).toString('base64');
+  // Content lives in the Liveblocks room; Supabase keeps metadata only.
+  await ensureRoom(name, userId);
+  await replaceRoomText(name, initial);
 
   const { error } = await supabase
     .from('documents')
-    .insert({ name, owner_id: userId, title, state, updated_at: new Date().toISOString() });
+    .insert({ name, owner_id: userId, title, state: '', updated_at: new Date().toISOString() });
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   return Response.json({ name, title }, { status: 201 });

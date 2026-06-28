@@ -1,5 +1,6 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
+import { setRoomAccess } from '@/lib/liveblocks-server';
 
 export const runtime = 'nodejs';
 
@@ -73,6 +74,13 @@ export async function POST(req: Request) {
     .upsert({ doc_name: room, user_id: grantee, role, invited_by: userId }, { onConflict: 'doc_name,user_id' });
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
+  // Grant the collaborator access to the Liveblocks room.
+  try {
+    await setRoomAccess(room, grantee, role !== 'viewer');
+  } catch {
+    /* room may not exist yet; access still recorded in ACL */
+  }
+
   return Response.json({ ok: true, email, role });
 }
 
@@ -90,5 +98,10 @@ export async function DELETE(req: Request) {
 
   const { error } = await supabase.from('document_acl').delete().eq('doc_name', room).eq('user_id', target);
   if (error) return Response.json({ error: error.message }, { status: 500 });
+  try {
+    await setRoomAccess(room, target, false);
+  } catch {
+    /* ignore */
+  }
   return Response.json({ ok: true });
 }
