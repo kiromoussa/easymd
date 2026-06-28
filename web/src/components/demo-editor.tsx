@@ -14,8 +14,10 @@ import { useUser, UserButton } from '@clerk/nextjs';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 const COLORS = ['#1a73e8', '#34a853', '#fbbc04', '#ea4335', '#9334e6', '#00acc1'];
-const DOC_NAME = 'easymd-demo';
+const DEFAULT_DOC = 'easymd-demo';
 const WS_URL = process.env.NEXT_PUBLIC_COLLAB_WS_URL || 'ws://localhost:3848';
+
+const prettify = (n: string) => n.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 /* Theme palette — explicit dark: variant utilities (robust under Turbopack). */
 const PANEL = 'bg-white dark:bg-[#151a21]';
@@ -82,6 +84,48 @@ export function DemoEditor() {
   const [peerCount, setPeerCount] = useState(1);
   const [zoom, setZoom] = useState(100);
   const [headings, setHeadings] = useState<Heading[]>([]);
+  const [activeDoc, setActiveDoc] = useState(DEFAULT_DOC);
+  const [docs, setDocs] = useState<{ name: string; updated_at: string }[]>([]);
+  const [docMenuOpen, setDocMenuOpen] = useState(false);
+
+  const loadDocs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/documents');
+      if (res.ok) {
+        const j = await res.json();
+        setDocs(Array.isArray(j.documents) ? j.documents : []);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/documents')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j) setDocs(Array.isArray(j.documents) ? j.documents : []);
+      })
+      .catch(() => {});
+  }, []);
+
+  const createDoc = useCallback(async () => {
+    const name = window.prompt('New document name (e.g. product-spec):');
+    if (!name) return;
+    const res = await fetch('/api/documents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      window.alert(j.error || 'Could not create document');
+      return;
+    }
+    await loadDocs();
+    setActiveDoc(j.name);
+    setDocMenuOpen(false);
+  }, [loadDocs]);
 
   const refreshDerived = useCallback((text: string) => {
     setPreviewHtml(marked.parse(text, { async: false }) as string);
@@ -98,7 +142,7 @@ export function DemoEditor() {
 
     const ydoc = new Y.Doc();
     const ytext = ydoc.getText('markdown');
-    const provider = new WebsocketProvider(WS_URL, DOC_NAME, ydoc);
+    const provider = new WebsocketProvider(WS_URL, activeDoc, ydoc);
     providerRef.current = provider;
 
     const displayName =
@@ -145,7 +189,7 @@ export function DemoEditor() {
       viewRef.current = null;
       providerRef.current = null;
     };
-  }, [user, refreshDerived]);
+  }, [user, refreshDerived, activeDoc]);
 
   const wrapInline = useCallback((before: string, after = before) => {
     const view = viewRef.current;
@@ -254,10 +298,49 @@ export function DemoEditor() {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* top bar */}
         <header className={`flex h-14 items-center gap-3 border-b ${BORDER} ${PANEL} px-4`}>
-          <div className={`flex items-center gap-2 rounded-lg border ${BORDER} px-2.5 py-1.5`}>
-            <span className="flex h-5 w-5 items-center justify-center rounded bg-[#1a73e8] text-[10px] font-bold text-white">e</span>
-            <span className="text-sm font-medium">easymd</span>
-            <Icon path={ICONS.chevron} className={`h-4 w-4 ${MUTED2}`} />
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setDocMenuOpen((o) => !o)}
+              className={`flex items-center gap-2 rounded-lg border ${BORDER} ${HOVER} px-2.5 py-1.5`}
+            >
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-[#1a73e8] text-[10px] font-bold text-white">e</span>
+              <span className="max-w-[160px] truncate text-sm font-medium">{prettify(activeDoc)}</span>
+              <Icon path={ICONS.chevron} className={`h-4 w-4 ${MUTED2}`} />
+            </button>
+            {docMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setDocMenuOpen(false)} />
+                <div className={`absolute left-0 top-full z-20 mt-1 w-64 overflow-hidden rounded-lg border ${BORDER} ${PANEL} shadow-lg`}>
+                  <div className={`max-h-72 overflow-auto thin-scroll py-1`}>
+                    {docs.length === 0 && <p className={`px-3 py-2 text-xs ${MUTED2}`}>No documents yet.</p>}
+                    {docs.map((d) => (
+                      <button
+                        key={d.name}
+                        type="button"
+                        onClick={() => {
+                          setActiveDoc(d.name);
+                          setDocMenuOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${HOVER} ${
+                          d.name === activeDoc ? `font-medium ${ACCENT}` : MUTED
+                        }`}
+                      >
+                        <Icon path={ICONS.doc} className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{prettify(d.name)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={createDoc}
+                    className={`flex w-full items-center gap-2 border-t ${BORDER} px-3 py-2.5 text-left text-sm font-medium ${ACCENT} ${HOVER}`}
+                  >
+                    <span className="text-base leading-none">＋</span> New document
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="relative mx-auto hidden w-full max-w-md items-center md:flex">
@@ -297,10 +380,10 @@ export function DemoEditor() {
 
         {/* title row */}
         <div className={`flex flex-wrap items-center gap-3 border-b ${BORDER} ${PANEL} px-5 py-3`}>
-          <h1 className="text-xl font-semibold tracking-tight">NDA — Agreement</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{prettify(activeDoc)}</h1>
           <span className={`flex items-center gap-1.5 text-xs ${MUTED2}`}>
             <Icon path={ICONS.clock} className="h-3.5 w-3.5" />
-            Synced live
+            Synced live · agent-editable
           </span>
           <div className="ml-auto flex items-center gap-2">
             <span className={`flex items-center gap-1.5 rounded-md border ${BORDER} px-2.5 py-1 text-xs font-medium ${MUTED}`}>
