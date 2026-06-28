@@ -36,6 +36,13 @@ The collab server is a standalone `node` process (not Next.js), so it loads `web
 - **Local dev:** requires Docker + the Supabase CLI (system tools — install once; not part of the npm update script). From repo root: `supabase start`, then `supabase db reset --local` (or `migration up --local`) to apply schema. Use the local API URL (`http://127.0.0.1:54321`) + the local `service_role` key from `supabase status -o env`. Studio: http://127.0.0.1:54323. For Docker-in-Docker here: install Docker 29 with `fuse-overlayfs` storage driver + `containerd-snapshotter: false`, iptables-legacy, run `dockerd`, and `chmod 666 /var/run/docker.sock`.
 - Inspect state quickly: `docker exec supabase_db_workspace psql -U postgres -d postgres -c "select name, length(state), updated_at from public.documents;"`.
 
+### AI agent integration (MCP)
+The collab server is **multi-document**: any WebSocket room name is loaded from / saved to the `documents` table (room = WS URL path). The editor has a document switcher (top-bar chip) backed by `GET/POST /api/documents`.
+
+`web/scripts/mcp-server.mjs` (run: `npm run mcp` in `web/`) is an MCP **stdio** server exposing `list_documents`, `read_document`, `create_document`, `update_document`, `append_to_document`. It connects to the collab server as a Yjs client, so agent edits sync **live** to open browser editors and persist to Supabase; new docs appear in the switcher for everyone. Requires the collab server running + Supabase creds. Example config: `.cursor/mcp.json` (creds resolve from `web/.env.local`; note `process.loadEnvFile` does NOT override values already set in the MCP client's `env`, so leave Supabase keys out of `mcp.json` to use `.env.local`).
+
+- **Yjs instance pairing (critical):** the collab server imports `y-websocket/bin/utils` (CJS) so it pairs Yjs via `require('yjs')`; the MCP server imports `y-websocket` (ESM) so it must use `import * as Y from 'yjs'`. Mixing the CJS and ESM Yjs builds triggers `Yjs was already imported` and silently breaks CRDT sync (reads return empty / edits drop).
+
 ### Lint / build
 - Web lint: `npm run lint` in `web/` (flat ESLint config). The repo currently has pre-existing lint errors in `web/src/components/site-header.tsx` (`no-html-link-for-pages`) unrelated to environment setup.
 - Web production build: `npm run build` in `web/` (also requires Clerk keys to be present).

@@ -39,6 +39,17 @@ easymd open CLAUDE.md
 
 Share the URL with a teammate. Edits sync live via CRDT. Changes land straight back to the file on disk and into git.
 
+## AI agents (MCP)
+
+easymd ships an MCP server so AI agents edit the **same live documents** humans do — changes sync in real time and persist to Supabase.
+
+```bash
+cd web
+npm run mcp          # stdio MCP server (needs the collab server running + Supabase env)
+```
+
+Tools: `list_documents`, `read_document`, `create_document`, `update_document`, `append_to_document`. Docs an agent creates show up in the app's document switcher for everyone; edits an agent makes appear live in any open editor. Register it with Cursor/Claude via `.cursor/mcp.json`.
+
 ## Why
 
 AI agents made markdown load-bearing. `AGENTS.md` and `CLAUDE.md` are now the single source of truth for how your project works — but collaborating on them still means pull requests for engineers or copy-paste between Google Docs and your repo for everyone else.
