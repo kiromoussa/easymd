@@ -1,15 +1,14 @@
 import Link from 'next/link';
 import { HeaderAuth } from '@/components/header-auth';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Logo } from '@/components/logo';
 
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-white/10 dark:bg-slate-950/80">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a73e8] text-sm font-bold text-white">
-            e
-          </span>
+          <Logo className="h-9 w-9 text-slate-900 dark:text-white" />
           <span className="text-lg font-medium tracking-tight text-slate-900 dark:text-white">easymd</span>
         </Link>
 

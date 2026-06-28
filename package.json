@@ -1,14 +1,22 @@
 {
-  "name": "easymd",
-  "version": "0.1.0",
-  "description": "Google Docs for markdown — collaborate on the actual .md file in your repo",
+  "name": "easymd-cli",
+  "version": "0.1.1",
+  "description": "Google Docs for markdown — collaborate on the actual .md file in your repo, live with humans and AI agents. CLI: login, auto-sync, and open .md files for real-time editing.",
   "type": "module",
   "bin": {
-    "easymd": "./bin/easymd.js"
+    "easymd": "./bin/easymd.js",
+    "easymd-cli": "./bin/easymd.js"
   },
+  "files": [
+    "bin",
+    "src",
+    "client",
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "node scripts/build.js",
-    "postinstall": "node scripts/build.js",
+    "postinstall": "node scripts/build.js > /dev/null 2>&1 || true",
     "prepublishOnly": "npm run build",
     "start": "node bin/easymd.js",
     "web:dev": "npm run dev --prefix web",
@@ -24,9 +32,13 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "chokidar": "^4.0.3",
-    "express": "^4.21.2",
     "open": "^10.1.0",
+    "zod": "^4.4.3"
+  },
+  "optionalDependencies": {
+    "express": "^4.21.2",
     "ws": "^8.18.0",
     "y-websocket": "^2.1.0",
     "yjs": "^13.6.24"

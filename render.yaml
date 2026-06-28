@@ -1,0 +1,22 @@
+# Render Blueprint for the easymd collab WebSocket server.
+# Vercel can't host a persistent WebSocket server, so the Yjs collab server runs here.
+# Deploy: Render Dashboard → New → Blueprint → pick this repo. Then set the secret env
+# vars (COLLAB_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) to match the Vercel app.
+services:
+  - type: web
+    name: easymd-collab
+    runtime: node
+    rootDir: web
+    plan: starter
+    buildCommand: npm install
+    startCommand: node scripts/collab-server.mjs
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: COLLAB_SECRET
+        sync: false # paste the same value used in the Vercel app
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

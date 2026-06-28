@@ -1,16 +1,33 @@
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
-import { Roboto } from 'next/font/google';
+import { dark } from '@clerk/themes';
+import { Inter } from 'next/font/google';
 import './globals.css';
 
-const roboto = Roboto({
-  weight: ['300', '400', '500', '700'],
+// Match easymd's dark + lime palette on all Clerk UI (modals, sign-in/up pages).
+const clerkAppearance = {
+  baseTheme: dark,
+  variables: {
+    colorPrimary: '#daff76',
+    colorTextOnPrimaryBackground: '#333804',
+    colorBackground: '#0b0f0e',
+    colorInputBackground: '#11151b',
+    colorText: '#e8ffef',
+    colorTextSecondary: 'rgba(232,255,239,0.72)',
+    colorInputText: '#e8ffef',
+    borderRadius: '0.6rem',
+    fontFamily: 'var(--font-inter), ui-sans-serif, system-ui, sans-serif',
+  },
+};
+
+const inter = Inter({
+  weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
-  variable: '--font-roboto',
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
-  title: 'easymd — Google Docs for Markdown',
+  title: 'easymd',
   description:
     'Collaborate on CLAUDE.md and AGENTS.md in real time. Clean markdown saves 40–90% tokens vs HTML, DOCX, and PDF. The file on disk stays canonical.',
 };
@@ -23,8 +40,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={`${roboto.variable} h-full`} suppressHydrationWarning>
+    <ClerkProvider appearance={clerkAppearance}>
+      <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
         <head>
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         </head>

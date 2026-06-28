@@ -2,7 +2,10 @@
   "mcpServers": {
     "easymd": {
       "command": "node",
-      "args": ["web/scripts/mcp-server.mjs"]
+      "args": ["web/scripts/mcp-server.mjs"],
+      "env": {
+        "EASYMD_OWNER_ID": "REPLACE_WITH_YOUR_ACCOUNT_ID"
+      }
     }
   }
 }

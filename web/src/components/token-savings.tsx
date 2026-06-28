@@ -3,7 +3,7 @@ const stats = [
     format: 'Raw HTML',
     savings: '75–90%',
     detail: 'Strip tags, CSS, and nested markup that models never needed.',
-    tone: 'from-blue-500 to-blue-600',
+    tone: 'from-[#6c8f1a] to-[#46600a]',
   },
   {
     format: 'Word / DOCX',
@@ -43,7 +43,7 @@ export function TokenSavingsSection() {
       <section id="tokens" className="border-t border-slate-200 bg-white py-24 dark:border-white/10 dark:bg-slate-950">
         <div className="mx-auto max-w-6xl px-6">
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-wider text-[#1a73e8] dark:text-blue-400">
+            <p className="text-sm font-semibold uppercase tracking-wider text-[var(--accent-strong)] dark:text-[var(--accent-strong)]">
               Token economics
             </p>
             <h2 className="mt-3 text-3xl font-normal tracking-tight text-slate-900 sm:text-4xl dark:text-white">
@@ -91,7 +91,7 @@ export function TokenSavingsSection() {
                 key={item.title}
                 className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-white/10 dark:bg-slate-950"
               >
-                <span className="text-2xl text-[#1a73e8] dark:text-blue-400">{item.icon}</span>
+                <span className="text-2xl text-[var(--accent-strong)] dark:text-[var(--accent-strong)]">{item.icon}</span>
                 <h3 className="mt-4 text-xl font-medium text-slate-900 dark:text-white">{item.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{item.body}</p>
               </article>

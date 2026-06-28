@@ -1,40 +1,75 @@
 'use client';
 
 import Link from 'next/link';
-import { SignUpButton } from '@clerk/nextjs';
+import { SignInButton, SignUpButton, useAuth } from '@clerk/nextjs';
 
-export function HeroCtas() {
+const primary =
+  'rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]';
+const ghost =
+  'rounded-full border border-[var(--hairline)] px-6 py-3 text-sm font-medium text-[var(--mint)] transition hover:bg-white/5';
+
+export function HeaderCtas() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (!isLoaded) return <div className="h-9 w-20 animate-pulse rounded-full bg-white/5" />;
+
+  if (isSignedIn) {
+    return (
+      <Link href="/dashboard" className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]">
+        Dashboard
+      </Link>
+    );
+  }
+
   return (
-    <div className="mt-10 flex flex-wrap items-center gap-4">
+    <div className="flex items-center gap-2">
+      <SignInButton mode="modal">
+        <button className="px-3 py-2 text-sm text-[var(--mint-muted)] transition hover:text-[var(--mint)]">Sign in</button>
+      </SignInButton>
       <SignUpButton mode="modal">
-        <button className="rounded-full bg-[#1a73e8] px-6 py-3 text-sm font-medium text-white shadow-md transition hover:bg-[#1765cc]">
-          Sign up free — try the demo
+        <button className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]">
+          Get started
         </button>
       </SignUpButton>
-      <Link
-        href="/sign-in"
-        className="rounded-full border border-slate-300 px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-white/20 dark:text-slate-200 dark:hover:bg-white/10"
-      >
-        Sign in
-      </Link>
+    </div>
+  );
+}
+
+export function HeroCtas() {
+  const { isSignedIn } = useAuth();
+  return (
+    <div className="mt-10 flex flex-wrap items-center gap-3">
+      {isSignedIn ? (
+        <Link href="/dashboard" className={primary}>
+          Open dashboard
+        </Link>
+      ) : (
+        <SignUpButton mode="modal">
+          <button className={primary}>Get started</button>
+        </SignUpButton>
+      )}
+      <a href="#workflow" className={ghost}>
+        See workflow
+      </a>
     </div>
   );
 }
 
 export function FooterCtas() {
+  const { isSignedIn } = useAuth();
+  // Sits on the lime CTA band, so the button is the dark inverse for contrast.
+  const dark = 'rounded-full bg-[var(--ink)] px-6 py-3 text-sm font-semibold text-[var(--mint)] transition hover:opacity-90';
   return (
-    <div className="mt-10 flex flex-wrap justify-center gap-4">
-      <SignUpButton mode="modal">
-        <button className="rounded-full bg-white px-6 py-3 text-sm font-medium text-[#1a73e8] shadow-md transition hover:bg-blue-50">
-          Create free account
-        </button>
-      </SignUpButton>
-      <Link
-        href="/demo"
-        className="rounded-full border border-white/40 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10"
-      >
-        Go to demo →
-      </Link>
+    <div className="mt-10 flex flex-wrap justify-center gap-3">
+      {isSignedIn ? (
+        <Link href="/dashboard" className={dark}>
+          Open your dashboard →
+        </Link>
+      ) : (
+        <SignUpButton mode="modal">
+          <button className={dark}>Get started free →</button>
+        </SignUpButton>
+      )}
     </div>
   );
 }

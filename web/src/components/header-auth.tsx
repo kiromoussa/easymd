@@ -14,10 +14,10 @@ export function HeaderAuth({ isLight }: { isLight: boolean }) {
     return (
       <>
         <Link
-          href="/demo"
-          className="rounded-full bg-[#1a73e8] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#1765cc]"
+          href="/dashboard"
+          className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-fg)] shadow-sm transition hover:bg-[var(--accent-hover)]"
         >
-          Open demo
+          Dashboard
         </Link>
         <UserButton />
       </>
@@ -29,14 +29,14 @@ export function HeaderAuth({ isLight }: { isLight: boolean }) {
       <SignInButton mode="modal">
         <button
           className={`hidden rounded-full px-4 py-2 text-sm font-medium sm:inline-flex ${
-            isLight ? 'text-[#1a73e8] hover:bg-blue-50' : 'text-white hover:bg-white/10'
+            isLight ? 'text-[var(--accent-strong)] hover:bg-[var(--accent)]/10' : 'text-white hover:bg-white/10'
           }`}
         >
           Sign in
         </button>
       </SignInButton>
       <SignUpButton mode="modal">
-        <button className="rounded-full bg-[#1a73e8] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#1765cc]">
+        <button className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-fg)] shadow-sm transition hover:bg-[var(--accent-hover)]">
           Sign up free
         </button>
       </SignUpButton>

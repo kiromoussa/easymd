@@ -8,6 +8,7 @@
  * to Supabase. New documents created here immediately show up in the app's
  * document switcher for anyone who needs them.
  */
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import WS from 'ws';
 import * as Y from 'yjs';
@@ -31,6 +32,22 @@ try {
 const WS_URL = process.env.COLLAB_WS_URL || process.env.NEXT_PUBLIC_COLLAB_WS_URL || 'ws://127.0.0.1:3848';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// The account this MCP server acts on behalf of. Set EASYMD_OWNER_ID to your Clerk
+// user id (visible in the easymd dashboard) so docs an agent creates land in your
+// account and show up in your dashboard. Unset = legacy global mode (no scoping).
+const OWNER_ID = process.env.EASYMD_OWNER_ID || '';
+
+// The MCP server is a trusted process: it self-mints collab access tickets with the
+// shared COLLAB_SECRET (the same secret the Next API uses to issue tickets to browsers
+// and the collab server uses to verify them). If unset, the collab server runs open.
+const COLLAB_SECRET = process.env.COLLAB_SECRET || '';
+function mintTicket(room) {
+  if (!COLLAB_SECRET) return '';
+  const exp = Date.now() + 60_000; // short-lived: each tool call opens a fresh session
+  const sig = crypto.createHmac('sha256', COLLAB_SECRET).update(`${room}.${exp}`).digest('hex');
+  return `${exp}.${sig}`;
+}
 const supabase =
   SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
     ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -45,10 +62,20 @@ const slug = (s) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
 
+// Map a friendly name the agent passes (e.g. "product-spec") to the namespaced room
+// id, and back, so the agent never has to know about the owner prefix.
+const roomName = (name) => (OWNER_ID ? `${OWNER_ID}__${slug(name)}` : slug(name));
+const stripOwner = (room) =>
+  OWNER_ID && room.startsWith(`${OWNER_ID}__`) ? room.slice(OWNER_ID.length + 2) : room;
+
 /** Open a live collaborative session for `name`, run `fn(ytext)`, flush, close. */
 async function withDoc(name, { mutate, fn }) {
   const ydoc = new Y.Doc();
-  const provider = new WebsocketProvider(WS_URL, name, ydoc, { WebSocketPolyfill: WS });
+  const ticket = mintTicket(name);
+  const provider = new WebsocketProvider(WS_URL, name, ydoc, {
+    WebSocketPolyfill: WS,
+    params: ticket ? { ticket } : {},
+  });
   try {
     await new Promise((resolve, reject) => {
       const t = setTimeout(() => reject(new Error(`Timed out connecting to collab server at ${WS_URL}. Is it running?`)), 10000);
@@ -86,10 +113,20 @@ server.registerTool(
   },
   async () => {
     if (!supabase) return fail('Supabase is not configured (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY).');
-    const { data, error } = await supabase.from('documents').select('name, updated_at').order('updated_at', { ascending: false });
+    let q = supabase.from('documents').select('name, title, updated_at').order('updated_at', { ascending: false });
+    if (OWNER_ID) q = q.eq('owner_id', OWNER_ID);
+    const { data, error } = await q;
     if (error) return fail(`Failed to list documents: ${error.message}`);
     if (!data?.length) return ok('No documents yet. Use create_document to add one.');
-    return ok(data.map((d) => `- ${d.name} (updated ${d.updated_at})`).join('\n'));
+    return ok(
+      data
+        .map((d) => {
+          const name = stripOwner(d.name);
+          const label = d.title ? `${name} — ${d.title}` : name;
+          return `- ${label} (updated ${d.updated_at})`;
+        })
+        .join('\n'),
+    );
   },
 );
 
@@ -101,8 +138,8 @@ server.registerTool(
     inputSchema: { name: z.string().describe('Document name, e.g. "easymd-demo" or "product-spec"') },
   },
   async ({ name }) => {
-    const doc = slug(name);
-    if (supabase && !(await docExists(doc))) return fail(`Document "${doc}" does not exist. Use list_documents to see options.`);
+    const doc = roomName(name);
+    if (supabase && !(await docExists(doc))) return fail(`Document "${slug(name)}" does not exist. Use list_documents to see options.`);
     try {
       const text = await withDoc(doc, { mutate: false, fn: (ytext) => ytext.toString() });
       return ok(text || '(empty document)');
@@ -123,9 +160,9 @@ server.registerTool(
     },
   },
   async ({ name, content }) => {
-    const doc = slug(name);
-    if (!doc) return fail('Provide a valid document name.');
-    if (await docExists(doc)) return fail(`Document "${doc}" already exists.`);
+    if (!slug(name)) return fail('Provide a valid document name.');
+    const doc = roomName(name);
+    if (await docExists(doc)) return fail(`Document "${slug(name)}" already exists.`);
     const body = content && content.trim() ? content : `# ${name.trim()}\n\nCreated by an AI agent via MCP. Humans and agents edit this together.\n`;
     try {
       await withDoc(doc, {
@@ -134,7 +171,16 @@ server.registerTool(
           if (ytext.length === 0) ytext.insert(0, body);
         },
       });
-      return ok(`Created document "${doc}". It now appears in easymd for everyone.`);
+      // Tag the freshly persisted row with the owning account + a friendly title so it
+      // shows up in that account's dashboard. (The collab server already set owner_id
+      // from the room name; this also records the title.)
+      if (supabase) {
+        await supabase
+          .from('documents')
+          .update({ owner_id: OWNER_ID || null, title: name.trim() })
+          .eq('name', doc);
+      }
+      return ok(`Created document "${slug(name)}". It now appears in easymd${OWNER_ID ? ' in your account' : ' for everyone'}.`);
     } catch (e) {
       return fail(e.message);
     }
@@ -152,8 +198,8 @@ server.registerTool(
     },
   },
   async ({ name, content }) => {
-    const doc = slug(name);
-    if (supabase && !(await docExists(doc))) return fail(`Document "${doc}" does not exist.`);
+    const doc = roomName(name);
+    if (supabase && !(await docExists(doc))) return fail(`Document "${slug(name)}" does not exist.`);
     try {
       await withDoc(doc, {
         mutate: true,
@@ -162,7 +208,7 @@ server.registerTool(
           ytext.insert(0, content);
         },
       });
-      return ok(`Updated "${doc}" (${content.length} chars). Live editors saw the change instantly.`);
+      return ok(`Updated "${slug(name)}" (${content.length} chars). Live editors saw the change instantly.`);
     } catch (e) {
       return fail(e.message);
     }
@@ -180,8 +226,8 @@ server.registerTool(
     },
   },
   async ({ name, text }) => {
-    const doc = slug(name);
-    if (supabase && !(await docExists(doc))) return fail(`Document "${doc}" does not exist.`);
+    const doc = roomName(name);
+    if (supabase && !(await docExists(doc))) return fail(`Document "${slug(name)}" does not exist.`);
     try {
       const total = await withDoc(doc, {
         mutate: true,
@@ -191,7 +237,7 @@ server.registerTool(
           return ytext.length;
         },
       });
-      return ok(`Appended ${text.length} chars to "${doc}" (now ${total} chars).`);
+      return ok(`Appended ${text.length} chars to "${slug(name)}" (now ${total} chars).`);
     } catch (e) {
       return fail(e.message);
     }
@@ -200,4 +246,6 @@ server.registerTool(
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error(`easymd MCP server ready. Collab: ${WS_URL} | Supabase: ${supabase ? 'configured' : 'not configured'}`);
+console.error(
+  `easymd MCP server ready. Collab: ${WS_URL} | Supabase: ${supabase ? 'configured' : 'not configured'} | Account: ${OWNER_ID || 'global (set EASYMD_OWNER_ID)'}`,
+);
