@@ -137,6 +137,46 @@ function parseTaskBlock(region: string): TaskState {
   return out;
 }
 
+// ── Provenance log + intent-based proposals ───────────────────────────────────────
+const LOG_OPEN = '<!-- easymd:log -->';
+const LOG_CLOSE = '<!-- /easymd:log -->';
+const escapeAttr = (s: string) => s.replace(/[\r\n]+/g, ' ').replace(/"/g, '”').replace(/--?>/g, '→').slice(0, 200);
+
+// Append a provenance entry to the doc's Activity log (created if missing).
+export async function appendLog(roomId: string, entry: string) {
+  await mutateRoom(roomId, (t) => {
+    const text = t.toString();
+    const line = `- ${entry}\n`;
+    const start = text.indexOf(LOG_OPEN);
+    if (start !== -1) {
+      const closeIdx = text.indexOf(LOG_CLOSE, start);
+      if (closeIdx !== -1) {
+        t.insert(closeIdx, line);
+        return;
+      }
+    }
+    t.insert(t.length, `${t.length && !text.endsWith('\n') ? '\n' : ''}\n${LOG_OPEN}\n## 🧾 Activity\n${line}${LOG_CLOSE}\n`);
+  });
+}
+
+// Insert an intent-tagged proposal block (a reviewable suggestion, not an overwrite)
+// and log it. Returns the proposal id.
+export async function addProposal(roomId: string, intent: string, content: string, by = 'agent'): Promise<string> {
+  const id = `p${Math.abs(hashStr(intent + content)).toString(36)}${(content.length % 997).toString(36)}`;
+  const block = `<!-- easymd:proposal id="${id}" intent="${escapeAttr(intent)}" by="${by}" -->\n${content}\n<!-- /easymd:proposal -->`;
+  await mutateRoom(roomId, (t) => {
+    t.insert(0, `${block}\n\n`);
+  });
+  await appendLog(roomId, `${by} proposed: ${intent}`);
+  return id;
+}
+
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  return h;
+}
+
 // Create/merge the Task State block in a room via a minimal Yjs splice (preserves
 // concurrent edits outside the block). Returns the merged state.
 export async function upsertTaskState(roomId: string, partial: TaskState): Promise<TaskState> {

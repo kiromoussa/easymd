@@ -148,6 +148,28 @@ server.registerTool(
   },
 );
 
+server.registerTool(
+  'propose_change',
+  {
+    title: 'Propose a change (intent before edit)',
+    description:
+      'Propose an edit to a document WITHOUT overwriting it. State your intent (e.g. "resolve contradiction in §Auth", "add acceptance criteria", "update status") and the proposed markdown. It appears in the doc as a reviewable proposal the human can Accept or Reject — collaboration becomes intentful, not a silent overwrite. Use this for substantive changes; use update_document only for direct edits the human expects.',
+    inputSchema: {
+      name: z.string().describe('Document name'),
+      intent: z.string().describe('What this change does and why (shown to the human)'),
+      content: z.string().describe('The proposed markdown'),
+    },
+  },
+  async ({ name, intent, content }) => {
+    try {
+      await api('/api/cli/documents', { method: 'POST', body: JSON.stringify({ name, op: 'propose', intent, content }) });
+      return ok(`Proposed “${intent}” on "${name}". The owner can Accept or Reject it in the editor.`);
+    } catch (e) {
+      return fail(e.message);
+    }
+  },
+);
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
 console.error(`easymd MCP ready → ${BASE} ${TOKEN ? '(authenticated)' : '(NOT logged in — run `easymd login`)'}`);

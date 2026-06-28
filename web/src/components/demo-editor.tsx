@@ -47,6 +47,14 @@ interface Heading {
   line: number;
 }
 
+interface Proposal {
+  id: string;
+  intent: string;
+  by: string;
+  content: string;
+  raw: string;
+}
+
 function Icon({ path, className = 'h-[18px] w-[18px]' }: { path: string; className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -95,6 +103,7 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [matches, setMatches] = useState<number[]>([]);
   const [matchIdx, setMatchIdx] = useState(0);
@@ -170,7 +179,26 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
   }, [loadDocs]);
 
   const refreshDerived = useCallback((text: string) => {
-    setPreviewHtml(marked.parse(text, { async: false }) as string);
+    // Pull out agent proposals (rendered as React Accept/Reject cards, not raw markdown).
+    const props: Proposal[] = [];
+    const cleaned = text.replace(
+      /<!--\s*easymd:proposal\s+([^>]*?)-->([\s\S]*?)<!--\s*\/easymd:proposal\s*-->/g,
+      (raw, attrs, content) => {
+        const id = /id="([^"]*)"/.exec(attrs)?.[1] || raw.slice(0, 12);
+        const intent = /intent="([^"]*)"/.exec(attrs)?.[1] || 'change';
+        const by = /by="([^"]*)"/.exec(attrs)?.[1] || 'agent';
+        props.push({ id, intent, by, content: String(content).trim(), raw });
+        return '';
+      },
+    );
+    setProposals(props);
+
+    let html = marked.parse(cleaned, { async: false }) as string;
+    // Wrap easymd:task / easymd:log fences (HTML comments) into styled cards.
+    html = html
+      .replace(/(?:<p>\s*)?<!--\s*easymd:(task|log)\s*-->(?:\s*<\/p>)?/g, '<div class="task-state-card">')
+      .replace(/(?:<p>\s*)?<!--\s*\/easymd:(task|log)\s*-->(?:\s*<\/p>)?/g, '</div>');
+    setPreviewHtml(html);
     const hs: Heading[] = [];
     text.split('\n').forEach((line, i) => {
       const m = /^(#{1,3})\s+(.*)$/.exec(line.trim());
@@ -374,6 +402,41 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
     const { from, to } = view.state.selection.main;
     view.dispatch({ changes: { from, to, insert: text }, selection: EditorSelection.cursor(from + text.length) });
     view.focus();
+  };
+
+  // Append a provenance entry to the doc's Activity log (creates the block if needed).
+  const appendLogLine = (entry: string) => {
+    const view = viewRef.current;
+    if (!view) return;
+    const doc = view.state.doc.toString();
+    const OPEN = '<!-- easymd:log -->';
+    const CLOSE = '<!-- /easymd:log -->';
+    const line = `- ${entry}\n`;
+    const start = doc.indexOf(OPEN);
+    if (start !== -1) {
+      const close = doc.indexOf(CLOSE, start);
+      if (close !== -1) {
+        view.dispatch({ changes: { from: close, to: close, insert: line } });
+        return;
+      }
+    }
+    const block = `${doc.length && !doc.endsWith('\n') ? '\n' : ''}\n${OPEN}\n## 🧾 Activity\n${line}${CLOSE}\n`;
+    view.dispatch({ changes: { from: doc.length, to: doc.length, insert: block } });
+  };
+
+  // Resolve an agent proposal: accept replaces the block with the proposed content;
+  // reject removes it. Both append a provenance entry.
+  const resolveProposal = (p: Proposal, accept: boolean) => {
+    const view = viewRef.current;
+    if (!view) return;
+    const doc = view.state.doc.toString();
+    const idx = doc.indexOf(p.raw);
+    if (idx === -1) return;
+    let end = idx + p.raw.length;
+    while (doc[end] === '\n') end++;
+    view.dispatch({ changes: { from: idx, to: end, insert: accept && p.content ? `${p.content}\n\n` : '' } });
+    appendLogLine(`you ${accept ? 'accepted' : 'rejected'}: ${p.intent}`);
+    showToast(accept ? 'Accepted proposal' : 'Rejected proposal');
   };
 
   const insertImageFiles = async (files: FileList | File[]) => {
@@ -819,6 +882,42 @@ export function DemoEditor({ initialDoc }: { initialDoc?: string }) {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Agent proposals — intent-before-edit review (Accept / Reject) */}
+        {tab === 'editor' && proposals.length > 0 && (
+          <div className={`space-y-2 border-b ${BORDER} ${PANEL} px-4 py-3`}>
+            {proposals.map((p) => (
+              <div key={p.id} className={`rounded-lg border ${BORDER} ${ACCENT_SOFT} p-3`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-fg)]`}>
+                    {p.by} proposes
+                  </span>
+                  <span className="text-sm font-medium">{p.intent}</span>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => resolveProposal(p, true)}
+                      className="rounded-md bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => resolveProposal(p, false)}
+                      className={`rounded-md border ${BORDER} px-3 py-1 text-xs font-medium ${MUTED} ${HOVER}`}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+                <details className="mt-2">
+                  <summary className={`cursor-pointer text-xs ${MUTED2}`}>View proposed change</summary>
+                  <pre className={`mt-2 max-h-48 overflow-auto thin-scroll whitespace-pre-wrap rounded-md ${APP} p-2 text-xs ${MUTED}`}>{p.content}</pre>
+                </details>
+              </div>
+            ))}
           </div>
         )}
 

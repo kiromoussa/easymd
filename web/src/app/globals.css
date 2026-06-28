@@ -224,6 +224,25 @@ body {
   color: #9aa3af;
 }
 
+/* Task State block → styled execution-handoff card */
+.markdown-preview .task-state-card {
+  border: 1px solid var(--accent-strong);
+  background: rgba(198, 242, 78, 0.08);
+  border-radius: 12px;
+  padding: 0.25rem 1.25rem 1rem;
+  margin: 1.5em 0;
+}
+.dark .markdown-preview .task-state-card {
+  background: rgba(198, 242, 78, 0.06);
+  border-color: rgba(198, 242, 78, 0.35);
+}
+.markdown-preview .task-state-card h2 {
+  margin-top: 0.75em;
+  border: none;
+  font-size: 1.05rem;
+}
+.markdown-preview .task-state-card ul { margin-bottom: 0; }
+
 /* Thin, theme-aware scrollbars */
 .thin-scroll { scrollbar-width: thin; scrollbar-color: #d0d3d8 transparent; }
 .dark .thin-scroll { scrollbar-color: #2c333d transparent; }
