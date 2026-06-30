@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import * as Y from 'yjs';
 import { useHistoryVersions, useHistoryVersionData } from '@liveblocks/react';
+import { capture } from '@/lib/analytics';
 
 // Renders the markdown stored in a specific Liveblocks version snapshot.
 function VersionPreview({ versionId, onRestore }: { versionId: string; onRestore: (text: string) => void }) {
@@ -20,7 +21,10 @@ function VersionPreview({ versionId, onRestore }: { versionId: string; onRestore
       <div className="flex items-center justify-end border-b border-[#e3e6ea] px-4 py-2 dark:border-[#262d38]">
         <button
           type="button"
-          onClick={() => onRestore(text)}
+          onClick={() => {
+            capture('version_restored');
+            onRestore(text);
+          }}
           className="rounded-md bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent-hover)]"
         >
           Restore this version

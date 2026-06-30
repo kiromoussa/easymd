@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { Logo } from '@/components/logo';
+import { capture } from '@/lib/analytics';
 
 type Phase = 'idle' | 'authorizing' | 'sent' | 'error';
 
@@ -22,6 +23,7 @@ export function CliAuthClient() {
       const res = await fetch('/api/cli/token', { method: 'POST' });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error || 'Could not mint a CLI token');
+      capture('cli_login', { mode: port ? 'callback' : 'manual' });
       // Hand the token back to the CLI's local callback server.
       if (port) {
         window.location.href = `http://127.0.0.1:${port}/callback?token=${encodeURIComponent(j.token)}`;

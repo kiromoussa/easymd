@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { capture } from '@/lib/analytics';
 
 export interface DashboardDoc {
   name: string; // room id: "<ownerId>__<slug>"
@@ -91,6 +92,7 @@ export function DashboardGrid({
         setError(j.error || 'Could not create document');
         return;
       }
+      capture('document_created');
       router.push(`/editor?doc=${encodeURIComponent(j.name)}`);
     } finally {
       setCreating(false);

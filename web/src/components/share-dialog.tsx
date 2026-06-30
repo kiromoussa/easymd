@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { capture } from '@/lib/analytics';
 
 type Collaborator = { userId: string; email: string; role: 'editor' | 'viewer' };
 type Pending = { email: string; role: 'editor' | 'viewer' };
@@ -70,6 +71,7 @@ export function ShareDialog({
         setError(j.error || 'Could not share');
         return;
       }
+      capture('share_invite_sent', { role });
       setEmail('');
       await load();
     } finally {
@@ -80,6 +82,7 @@ export function ShareDialog({
   const changeRole = useCallback(
     async (addr: string, newRole: 'editor' | 'viewer') => {
       setBusy(true);
+      capture('collaborator_role_changed', { role: newRole });
       await post({ email: addr, role: newRole }).catch(() => {});
       await load();
       setBusy(false);
@@ -90,6 +93,7 @@ export function ShareDialog({
   const setLink = useCallback(
     async (next: LinkAccess) => {
       setLinkAccessState(next);
+      capture('link_access_changed', { access: next });
       await post({ linkAccess: next }).catch(() => {});
     },
     [post],
@@ -98,6 +102,7 @@ export function ShareDialog({
   const del = useCallback(
     async (qs: string) => {
       setBusy(true);
+      capture('invite_removed', { kind: qs.startsWith('user=') ? 'collaborator' : 'pending' });
       await fetch(`/api/documents/share?name=${encodeURIComponent(docName)}&${qs}`, { method: 'DELETE' }).catch(() => {});
       await load();
       setBusy(false);
