@@ -5,6 +5,9 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/health',
+  // PostHog reverse proxy (see next.config.ts rewrites). Must be public or Clerk
+  // redirects analytics requests — including anonymous landing-page pageviews — to sign-in.
+  '/ingest(.*)',
   // CLI endpoints authenticate with their own Bearer token (verified in the route),
   // not a Clerk session cookie — so they must be exempt from Clerk's cookie protection.
   '/api/cli/documents',
